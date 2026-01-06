@@ -1,5 +1,10 @@
+import { useRouter } from 'expo-router';
 import {View,Text,Image, StyleSheet, TouchableOpacity} from 'react-native'
 const First = () => {
+    const router= useRouter();
+
+   
+
   return (
     <View style={styles.mainBox}>
       
@@ -15,8 +20,12 @@ const First = () => {
       </View>
 
       
-      <TouchableOpacity style={styles.firstButton}>
-        <Text style={styles.buttonText}>Next</Text>
+      <TouchableOpacity 
+      style={styles.firstButton}
+      onPress={()=>router.push("./login")
+        }
+      >
+        <Text style={styles.buttonText} >Get Started</Text>
       </TouchableOpacity>
     </View>
   );
@@ -54,7 +63,7 @@ const styles = StyleSheet.create({
     backgroundColor: "red",
     width: "100%", 
     height: 50,
-    borderRadius: 10,
+    borderRadius: 5,
     justifyContent: "center",
     alignItems: "center",
   },
