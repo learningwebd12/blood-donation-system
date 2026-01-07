@@ -1,3 +1,5 @@
+import { Link, useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -6,38 +8,70 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   Alert,
 } from "react-native";
-import { useState } from "react";
-import { Link } from "expo-router";
+import { useState,useEffect } from "react";
+import Toast from "react-native-toast-message";
 
-export default function Register() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+
+const Login = () => {
+  const router = useRouter(); // ✅ router for navigation
+
+    useEffect(() => {
+    const showRegisterToast = async () => {
+      const flag = await AsyncStorage.getItem("showRegisterToast");
+
+      if (flag === "true") {
+        Toast.show({
+          type: "success",
+          text1: "Account Created 🎉",
+          text2: "Please login to continue",
+        });
+
+        await AsyncStorage.removeItem("showRegisterToast");
+      }
+    };
+
+    showRegisterToast();
+  }, []);
+
+
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleRegister = async () => {
-    if (!name || !email || !phone || !password) {
-      Alert.alert("Error", "All fields are required");
+  const handleLogin = async () => {
+    if (!phone || !password) {
+      
       return;
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/register", {
+      const res = await fetch("http://192.168.1.74:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, password }),
+        body: JSON.stringify({ phone, password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        Alert.alert("Error", data.message || "Registration failed");
+        Alert.alert("Login Failed", data.message);
         return;
       }
 
-      Alert.alert("Success", "User registered successfully");
+      // ✅ SAVE TOKEN & USER
+      await AsyncStorage.setItem("token", data.token);
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
+
+      console.log("Logged in user:", data.user);
+
+      Alert.alert("Success", "Login successful");
+await AsyncStorage.setItem("showLoginToast", "true");
+
+      // ✅ REDIRECT TO HOME (NOT index)
+      router.replace("/home");
+
     } catch (error) {
       Alert.alert("Error", "Network error");
     }
@@ -49,29 +83,12 @@ export default function Register() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.container}>
-        <Text style={styles.headerTitle}>Create Account</Text>
+        <Text style={styles.headerTitle}>Welcome to Blood Care!</Text>
         <Text style={styles.subTitle}>
-          Register to become a blood donor
+          Enter your Mobile number and password to login
         </Text>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.userInput}
-            placeholder="Your Name"
-            value={name}
-            onChangeText={setName}
-          />
-
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.userInput}
-            placeholder="Email Address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
-
           <Text style={styles.label}>Mobile</Text>
           <TextInput
             style={styles.userInput}
@@ -84,31 +101,34 @@ export default function Register() {
           <Text style={styles.label}>Password</Text>
           <TextInput
             style={styles.userInput}
-            placeholder="Password"
+            placeholder="Enter your Password"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
           />
 
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleRegister}
-          >
-            <Text style={styles.loginButtonText}>Register</Text>
+          <TouchableOpacity style={styles.forgotContainer}>
+            <Text style={styles.forgotText}>Forget Password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+            <Text style={styles.loginButtonText}>Login</Text>
           </TouchableOpacity>
         </View>
 
-        <Link href={"/login"} asChild>
-          <TouchableOpacity style={{ marginTop: 20 }}>
+        <Link href="/auth/register" asChild>
+          <Pressable>
             <Text style={{ textAlign: "center" }}>
-              Already have an account? Login
+              Don&apos;t have an account ? Signup
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </Link>
       </View>
     </KeyboardAvoidingView>
   );
-}
+};
+
+export default Login;
 
 const styles = StyleSheet.create({
   mainLogin: {
@@ -151,12 +171,24 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: "#f9f9f9",
   },
+  forgotContainer: {
+    alignSelf: "flex-end",
+    marginBottom: 30,
+  },
+  forgotText: {
+    color: "#e63946",
+    fontWeight: "500",
+  },
   loginButton: {
     backgroundColor: "#e63946",
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: "center",
     elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   loginButtonText: {
     color: "#fff",

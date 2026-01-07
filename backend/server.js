@@ -1,14 +1,24 @@
-require("dotenv").config();
+const dotenv = require("dotenv");
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
+
+// 1. MUST BE FIRST: Load environment variables
+dotenv.config();
 
 connectDB();
 
 const app = express();
 
-app.use(cors({ origin: "http://localhost:8081" }));
+app.use(
+  cors({
+    origin: "http://localhost:8081",
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
   res.send("Blood Donation API Running");
