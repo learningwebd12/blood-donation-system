@@ -1,13 +1,12 @@
-import { AuthProvider } from "../context/AuthContext"
-import { Stack } from "expo-router";
-import Toast from 'react-native-toast-message';
+import { AuthProvider } from "../context/AuthContext";
+import AuthGate from "../components/AuthGate";
+import Toast from "react-native-toast-message";
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Stack />
-      <Toast /> 
+      <AuthGate />
+      <Toast />
     </AuthProvider>
   );
 }
-

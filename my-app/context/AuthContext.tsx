@@ -1,48 +1,59 @@
-import { useRouter } from 'expo-router';
-import { authService } from '../services/authService';
-import { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authService } from "../services/authService";
 
-const AuthContext = createContext<any>(null);
+type AuthContextType = {
+  user: any;
+  loading: boolean;
+  login: (data: { phone: string; password: string }) => Promise<any>;
+  logout: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check auth on app start
+  // App start auth check
   useEffect(() => {
     const initAuth = async () => {
-      const res = await authService.isAuthenticated();
-      if (res.authenticated) setUser(res.user);
-      setLoading(false);
+      try {
+        const res = await authService.isAuthenticated();
+        if (res?.authenticated) {
+          setUser(res.user);
+        }
+      } finally {
+        setLoading(false);
+      }
     };
+
     initAuth();
   }, []);
 
-  // Login function
   const login = async (credentials: { phone: string; password: string }) => {
     const res = await authService.login(credentials);
-    if (res.success) {
-      setUser(res.data.user); // ✅ update context immediately
-      await AsyncStorage.setItem('showLoginToast', 'true');
-      router.replace('/home'); // redirect to home
+    if (res.success && res.data) {  // ✅ Check res.data exists
+      setUser(res.data.user);
+      await AsyncStorage.setItem("showLoginToast", "true");
     }
     return res;
   };
 
-  // Logout function
   const logout = async () => {
     await authService.logout();
-    setUser(null); // clear context
-    router.replace('/auth/login'); // redirect to login
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  return ctx;
+};

@@ -1,134 +1,71 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 
-// ⚠️ IMPORTANT: Replace with your actual backend URL
-// For physical device: Use your computer's IP (find with ipconfig/ifconfig)
-// For Android emulator: Use http://10.0.2.2:5000/api/auth
-// For iOS simulator: Use http://localhost:5000/api/auth
-const API_URL = "http://192.168.1.74:5000/api/auth";
-
-// Create axios instance with default config
-const apiClient = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  timeout: 10000, // 10 second timeout
-});
-
-// Add token to requests automatically
-apiClient.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+const API_URL = "http://localhost:5000/api/auth";
 
 export const authService = {
-  // Register new user
-  register: async (userData: {
-    name: string;
-    email: string;
-    phone: string;
-    password: string;
-    bloodGroup?: string;
-  }) => {
+  async login(credentials: { phone: string; password: string }) {
     try {
-      const response = await apiClient.post("/register", userData);
-      return { success: true, data: response.data };
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return {
+          success: false,
+          message: data.message || "Login failed",
+        };
+      }
+
+      // ✅ Save token and user to AsyncStorage
+      await AsyncStorage.setItem("token", data.token);
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
+
+      return {
+        success: true,
+        data: {
+          token: data.token,
+          user: data.user,
+        },
+      };
     } catch (error: any) {
-      console.error("Register error:", error.message);
       return {
         success: false,
-        message: error.response?.data?.message || "Registration failed",
+        message: error.message || "Network error",
       };
     }
   },
 
-  // Login user
-  login: async (credentials: { phone: string; password: string }) => {
-    try {
-      const response = await apiClient.post("/login", credentials);
-      const { token, user } = response.data;
-
-      // Store token and user data
-      await AsyncStorage.setItem("token", token);
-      await AsyncStorage.setItem("user", JSON.stringify(user));
-
-      return { success: true, data: response.data };
-    } catch (error: any) {
-      console.error("Login error:", error.message);
-      return {
-        success: false,
-        message: error.response?.data?.message || "Login failed",
-      };
-    }
-  },
-
-  // Logout user
-  logout: async () => {
-    try {
-      console.log("🔴 Starting logout process...");
-      
-      // Try to call backend logout endpoint
-      try {
-        await apiClient.post("/logout");
-        console.log("✅ Backend logout successful");
-      } catch (backendError: any) {
-        console.log("⚠️ Backend logout failed:", backendError.message);
-        // Continue with local logout even if backend fails
-      }
-
-      // Clear AsyncStorage
-      await AsyncStorage.multiRemove(["token", "user"]);
-      console.log("✅ Local storage cleared");
-
-      return { success: true, message: "Logged out successfully" };
-    } catch (error: any) {
-      console.error("❌ Logout error:", error.message);
-      
-      // Force clear storage even on error
-      try {
-        await AsyncStorage.clear();
-      } catch (clearError) {
-        console.error("Failed to clear storage:", clearError);
-      }
-      
-      return { success: true, message: "Logged out locally" };
-    }
-  },
-
-  // Check if user is authenticated
-  isAuthenticated: async () => {
+  async isAuthenticated() {
     try {
       const token = await AsyncStorage.getItem("token");
-      const user = await AsyncStorage.getItem("user");
-      
-      if (!token || !user) {
-        return { authenticated: false, user: null };
+      const userStr = await AsyncStorage.getItem("user");
+
+      if (!token || !userStr) {
+        return { authenticated: false };
       }
 
-      return { authenticated: true, user: JSON.parse(user) };
+      const user = JSON.parse(userStr);
+
+      return {
+        authenticated: true,
+        user,
+      };
     } catch (error) {
-      console.error("Auth check error:", error);
-      return { authenticated: false, user: null };
+      return { authenticated: false };
     }
   },
 
-  // Get current user
-  getCurrentUser: async () => {
+  async logout() {
     try {
-      const user = await AsyncStorage.getItem("user");
-      return user ? JSON.parse(user) : null;
+      await AsyncStorage.removeItem("token");
+      await AsyncStorage.removeItem("user");
+      await AsyncStorage.removeItem("showLoginToast");
     } catch (error) {
-      console.error("Get user error:", error);
-      return null;
+      console.error("Logout error:", error);
     }
   },
 };

@@ -11,14 +11,15 @@ import {
   Pressable,
   Alert,
 } from "react-native";
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import Toast from "react-native-toast-message";
-
+import { useAuth } from "../../context/AuthContext"; // ✅ Import useAuth
 
 const Login = () => {
-  const router = useRouter(); // ✅ router for navigation
+  const router = useRouter();
+  const { login } = useAuth(); // ✅ Use AuthContext login
 
-    useEffect(() => {
+  useEffect(() => {
     const showRegisterToast = async () => {
       const flag = await AsyncStorage.getItem("showRegisterToast");
 
@@ -36,44 +37,28 @@ const Login = () => {
     showRegisterToast();
   }, []);
 
-
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
     if (!phone || !password) {
-      
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     try {
-      const res = await fetch("http://192.168.1.74:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, password }),
-      });
+      // ✅ Use AuthContext login instead of manual fetch
+      const res = await login({ phone, password });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        Alert.alert("Login Failed", data.message);
-        return;
+      if (res.success) {
+        Alert.alert("Success", "Login successful");
+        // ✅ Navigation handled by AuthGate automatically
+        // router.replace will happen in AuthGate when user state updates
+      } else {
+        Alert.alert("Login Failed", res.message || "Invalid credentials");
       }
-
-      // ✅ SAVE TOKEN & USER
-      await AsyncStorage.setItem("token", data.token);
-      await AsyncStorage.setItem("user", JSON.stringify(data.user));
-
-      console.log("Logged in user:", data.user);
-
-      Alert.alert("Success", "Login successful");
-await AsyncStorage.setItem("showLoginToast", "true");
-
-      // ✅ REDIRECT TO HOME (NOT index)
-      router.replace("/home");
-
-    } catch (error) {
-      Alert.alert("Error", "Network error");
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Network error");
     }
   };
 
@@ -116,7 +101,7 @@ await AsyncStorage.setItem("showLoginToast", "true");
           </TouchableOpacity>
         </View>
 
-        <Link href="/auth/register" asChild>
+        <Link href="/(auth)/register" asChild>
           <Pressable>
             <Text style={{ textAlign: "center" }}>
               Don&apos;t have an account ? Signup
