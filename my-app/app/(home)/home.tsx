@@ -95,9 +95,7 @@ const Home = () => {
               </View>
               <View>
                 <Text style={styles.helloText}>Hello, {user.name}</Text>
-                <Text style={styles.subText}>
-                  Blood Group: {user.bloodGroup || "A+"}
-                </Text>
+                
               </View>
             </View>
 

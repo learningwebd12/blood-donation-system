@@ -16,6 +16,7 @@ import Toast from "react-native-toast-message";
 import { useAuth } from "../../context/AuthContext"; // ✅ Import useAuth
 
 const Login = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const router = useRouter();
   const { login } = useAuth(); // ✅ Use AuthContext login
 

@@ -43,11 +43,11 @@ export default function Register() {
         return;
       }
 
-      // ✅ Save flag for login page
+      
       await AsyncStorage.setItem("showRegisterToast", "true");
 
-      // ✅ Redirect to login
-      router.replace("/auth/login");
+     
+      router.replace("/(auth)/login");
 
     } catch (err) {
       Alert.alert("Error", "Network error");

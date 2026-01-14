@@ -13,11 +13,11 @@ export default function AuthGate() {
 
     const inAuthGroup = segments[0] === "(auth)";
 
-    // User is logged out but not on auth screen
+   
     if (!user && !inAuthGroup) {
       router.replace("/(auth)/login");
     } 
-    // User is logged in but still on auth screen
+   
     else if (user && inAuthGroup) {
       router.replace("/(home)/home");
     }
