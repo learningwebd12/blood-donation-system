@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      require: true,
+      required: true,
       trim: true,
     },
 
@@ -39,20 +39,20 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    // ✅ USER TYPE (can be both donor and receiver)
+    // ✅ USER TYPE (DONOR by default)
     userType: {
       type: [String],
       enum: ["donor", "receiver"],
-      default: [],
+      default: ["donor"],
     },
 
-    // ✅ BLOOD TYPE (required for donors)
+    // ✅ BLOOD TYPE (needed for donors)
     bloodType: {
       type: String,
       enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
     },
 
-    // ✅ NEPAL LOCATION STRUCTURE
+    // ✅ LOCATION
     location: {
       province: {
         type: String,
@@ -68,45 +68,22 @@ const userSchema = new mongoose.Schema(
       },
       district: {
         type: String,
-        // You can add enum with all 77 districts if needed
-      },
-      municipality: {
-        type: String,
-        // e.g., "Kathmandu Metropolitan City", "Lalitpur Metropolitan City"
-      },
-      municipalityType: {
-        type: String,
-        enum: [
-          "Metropolitan",
-          "Sub-Metropolitan",
-          "Municipality",
-          "Rural Municipality",
-        ],
-      },
-      ward: {
-        type: Number,
-        min: 1,
-        max: 35, // Some municipalities have up to 32-35 wards
-      },
-      tole: {
-        type: String, // Optional: specific locality/tole name
-      },
-      coordinates: {
-        latitude: { type: Number },
-        longitude: { type: Number },
       },
     },
 
     // ✅ HEALTH INFO (for donors)
     healthInfo: {
-      age: { type: Number },
-      weight: { type: Number }, // in kg
+      age: Number,
+      weight: Number,
       gender: {
         type: String,
         enum: ["male", "female", "other"],
       },
       medicalConditions: [String],
-      isEligible: { type: Boolean, default: true },
+      isEligible: {
+        type: Boolean,
+        default: true,
+      },
     },
 
     // ✅ DONOR STATUS
@@ -129,13 +106,6 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    // ✅ NOTIFICATION SETTINGS
-    notificationSettings: {
-      pushEnabled: { type: Boolean, default: true },
-      urgentRequests: { type: Boolean, default: true },
-      nearbyRequests: { type: Boolean, default: true },
-    },
-
     fcmToken: {
       type: String,
       default: null,
@@ -151,18 +121,17 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true },
 );
 
-// Virtual for eligibility (can donate after 90 days)
+// ✅ VIRTUAL FIELD
 userSchema.virtual("canDonate").get(function () {
   if (!this.lastDonationDate) return true;
-  const daysSinceLastDonation = Math.floor(
-    (Date.now() - this.lastDonationDate) / (1000 * 60 * 60 * 24)
+
+  const days = Math.floor(
+    (Date.now() - this.lastDonationDate) / (1000 * 60 * 60 * 24),
   );
-  return daysSinceLastDonation >= 90;
+  return days >= 90;
 });
 
 module.exports = mongoose.model("User", userSchema);

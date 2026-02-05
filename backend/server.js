@@ -12,9 +12,9 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:8081",
+    origin: "http://localhost:5173",
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());
@@ -25,7 +25,10 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/profile", require("./routes/profile"));
+app.use("/api/profile", require("./routes/profileRoutes"));
+
+console.log("✅ Auth routes loaded");
+console.log("✅ Profile routes loaded");
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

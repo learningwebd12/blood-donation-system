@@ -1,5 +1,6 @@
 const User = require("../models/User");
 
+// Complete Profile
 exports.completeProfile = async (req, res) => {
   try {
     const {
@@ -7,10 +8,6 @@ exports.completeProfile = async (req, res) => {
       bloodType,
       province,
       district,
-      municipality,
-      municipalityType,
-      ward,
-      tole,
       age,
       weight,
       gender,
@@ -33,10 +30,10 @@ exports.completeProfile = async (req, res) => {
       });
     }
 
-    if (!province || !district || !municipality || !ward) {
+    if (!province || !district) {
       return res.status(400).json({
         success: false,
-        message: "Complete address is required",
+        message: "Province and district are required",
       });
     }
 
@@ -48,18 +45,18 @@ exports.completeProfile = async (req, res) => {
         bloodType,
         "location.province": province,
         "location.district": district,
-        "location.municipality": municipality,
-        "location.municipalityType": municipalityType,
-        "location.ward": ward,
-        "location.tole": tole,
-        "location.coordinates.latitude": latitude,
-        "location.coordinates.longitude": longitude,
+        ...(latitude && longitude
+          ? {
+              "location.coordinates.latitude": latitude,
+              "location.coordinates.longitude": longitude,
+            }
+          : {}),
         "healthInfo.age": age,
         "healthInfo.weight": weight,
         "healthInfo.gender": gender,
         profileComplete: true,
       },
-      { new: true }
+      { new: true },
     ).select("-password");
 
     res.json({
@@ -68,6 +65,7 @@ exports.completeProfile = async (req, res) => {
       user,
     });
   } catch (error) {
+    console.error("Complete profile error:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -75,6 +73,7 @@ exports.completeProfile = async (req, res) => {
   }
 };
 
+// Get Profile
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -84,157 +83,100 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// ✅ ADD THIS FUNCTION
+// ✅ Get Location Data
 exports.getLocationData = async (req, res) => {
   try {
     const nepalLocations = {
-      Koshi: {
-        districts: [
-          "Bhojpur",
-          "Dhankuta",
-          "Ilam",
-          "Jhapa",
-          "Khotang",
-          "Morang",
-          "Okhaldhunga",
-          "Panchthar",
-          "Sankhuwasabha",
-          "Solukhumbu",
-          "Sunsari",
-          "Taplejung",
-          "Terhathum",
-          "Udayapur",
-        ],
-      },
-      Madhesh: {
-        districts: [
-          "Bara",
-          "Parsa",
-          "Rautahat",
-          "Sarlahi",
-          "Dhanusha",
-          "Mahottari",
-          "Saptari",
-          "Siraha",
-        ],
-      },
-      Bagmati: {
-        districts: [
-          "Bhaktapur",
-          "Chitwan",
-          "Dhading",
-          "Dolakha",
-          "Kathmandu",
-          "Kavrepalanchok",
-          "Lalitpur",
-          "Makwanpur",
-          "Nuwakot",
-          "Ramechhap",
-          "Rasuwa",
-          "Sindhuli",
-          "Sindhupalchok",
-        ],
-      },
-      Gandaki: {
-        districts: [
-          "Baglung",
-          "Gorkha",
-          "Kaski",
-          "Lamjung",
-          "Manang",
-          "Mustang",
-          "Myagdi",
-          "Nawalpur",
-          "Parbat",
-          "Syangja",
-          "Tanahun",
-        ],
-      },
-      Lumbini: {
-        districts: [
-          "Arghakhanchi",
-          "Banke",
-          "Bardiya",
-          "Dang",
-          "Gulmi",
-          "Kapilvastu",
-          "Palpa",
-          "Parasi",
-          "Pyuthan",
-          "Rolpa",
-          "Rukum East",
-          "Rupandehi",
-        ],
-      },
-      Karnali: {
-        districts: [
-          "Dailekh",
-          "Dolpa",
-          "Humla",
-          "Jajarkot",
-          "Jumla",
-          "Kalikot",
-          "Mugu",
-          "Salyan",
-          "Surkhet",
-          "Rukum West",
-        ],
-      },
-      Sudurpashchim: {
-        districts: [
-          "Achham",
-          "Baitadi",
-          "Bajhang",
-          "Bajura",
-          "Dadeldhura",
-          "Darchula",
-          "Doti",
-          "Kailali",
-          "Kanchanpur",
-        ],
-      },
-    };
-
-    const majorMunicipalities = {
-      Kathmandu: [
-        {
-          name: "Kathmandu Metropolitan City",
-          type: "Metropolitan",
-          wards: 32,
-        },
-        {
-          name: "Budhanilkantha Municipality",
-          type: "Municipality",
-          wards: 13,
-        },
-        { name: "Chandragiri Municipality", type: "Municipality", wards: 15 },
-        { name: "Dakshinkali Municipality", type: "Municipality", wards: 9 },
-        { name: "Gokarneshwor Municipality", type: "Municipality", wards: 9 },
-        {
-          name: "Kageshwori Manohara Municipality",
-          type: "Municipality",
-          wards: 9,
-        },
-        { name: "Kirtipur Municipality", type: "Municipality", wards: 10 },
-        { name: "Nagarjun Municipality", type: "Municipality", wards: 10 },
-        { name: "Shankharapur Municipality", type: "Municipality", wards: 9 },
-        { name: "Tarakeshwar Municipality", type: "Municipality", wards: 11 },
-        { name: "Tokha Municipality", type: "Municipality", wards: 11 },
+      Koshi: [
+        "Bhojpur",
+        "Dhankuta",
+        "Ilam",
+        "Jhapa",
+        "Khotang",
+        "Morang",
+        "Okhaldhunga",
+        "Panchthar",
+        "Sankhuwasabha",
+        "Solukhumbu",
+        "Sunsari",
+        "Taplejung",
+        "Terhathum",
+        "Udayapur",
       ],
-      Lalitpur: [
-        { name: "Lalitpur Metropolitan City", type: "Metropolitan", wards: 29 },
-        { name: "Godawari Municipality", type: "Municipality", wards: 14 },
-        { name: "Mahalaxmi Municipality", type: "Municipality", wards: 10 },
+      Madhesh: [
+        "Bara",
+        "Parsa",
+        "Rautahat",
+        "Sarlahi",
+        "Dhanusha",
+        "Mahottari",
+        "Saptari",
+        "Siraha",
       ],
-      Bhaktapur: [
-        { name: "Bhaktapur Municipality", type: "Municipality", wards: 10 },
-        { name: "Changunarayan Municipality", type: "Municipality", wards: 9 },
-        {
-          name: "Madhyapur Thimi Municipality",
-          type: "Municipality",
-          wards: 9,
-        },
-        { name: "Suryabinayak Municipality", type: "Municipality", wards: 10 },
+      Bagmati: [
+        "Bhaktapur",
+        "Chitwan",
+        "Dhading",
+        "Dolakha",
+        "Kathmandu",
+        "Kavrepalanchok",
+        "Lalitpur",
+        "Makwanpur",
+        "Nuwakot",
+        "Ramechhap",
+        "Rasuwa",
+        "Sindhuli",
+        "Sindhupalchok",
+      ],
+      Gandaki: [
+        "Baglung",
+        "Gorkha",
+        "Kaski",
+        "Lamjung",
+        "Manang",
+        "Mustang",
+        "Myagdi",
+        "Nawalpur",
+        "Parbat",
+        "Syangja",
+        "Tanahun",
+      ],
+      Lumbini: [
+        "Arghakhanchi",
+        "Banke",
+        "Bardiya",
+        "Dang",
+        "Gulmi",
+        "Kapilvastu",
+        "Palpa",
+        "Parasi",
+        "Pyuthan",
+        "Rolpa",
+        "Rukum East",
+        "Rupandehi",
+      ],
+      Karnali: [
+        "Dailekh",
+        "Dolpa",
+        "Humla",
+        "Jajarkot",
+        "Jumla",
+        "Kalikot",
+        "Mugu",
+        "Salyan",
+        "Surkhet",
+        "Rukum West",
+      ],
+      Sudurpashchim: [
+        "Achham",
+        "Baitadi",
+        "Bajhang",
+        "Bajura",
+        "Dadeldhura",
+        "Darchula",
+        "Doti",
+        "Kailali",
+        "Kanchanpur",
       ],
     };
 
@@ -242,9 +184,9 @@ exports.getLocationData = async (req, res) => {
       success: true,
       provinces: Object.keys(nepalLocations),
       locations: nepalLocations,
-      municipalities: majorMunicipalities,
     });
   } catch (error) {
+    console.error("Get location data error:", error);
     res.status(500).json({
       success: false,
       message: error.message,

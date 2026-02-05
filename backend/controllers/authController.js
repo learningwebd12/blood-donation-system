@@ -1,93 +1,125 @@
-const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-exports.registerUser = async (req, res) => {
+// REGISTER
+exports.register = async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
 
-    if (
-      !name?.trim() ||
-      !email?.trim() ||
-      !phone?.trim() ||
-      !password?.trim()
-    ) {
-      return res.status(400).json({ message: "All fields are required" });
+    // Validation
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
     }
 
-    const userExists = await User.findOne({
-      $or: [{ email }, { phone }],
-    });
-
-    if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+    // Check if user exists
+    const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists with this email or phone",
+      });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create user with donor as default
     const user = await User.create({
       name,
       email,
       phone,
       password: hashedPassword,
+      userType: ["donor"], // ✅ default donor
+      profileComplete: false, // optional, complete later
+    });
+
+    // Generate token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d",
     });
 
     res.status(201).json({
+      success: true,
       message: "User registered successfully",
+      token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
         role: user.role,
+        userType: user.userType,
+        profileComplete: user.profileComplete,
       },
     });
   } catch (error) {
-    console.error("Register Error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Register error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-exports.loginUser = async (req, res) => {
+// LOGIN
+exports.login = async (req, res) => {
   try {
     const { phone, password } = req.body;
 
+    // Validation
     if (!phone || !password) {
-      return res
-        .status(400)
-        .json({ message: "Phone and password are required" });
+      return res.status(400).json({
+        success: false,
+        message: "Phone and password are required",
+      });
     }
 
+    // Find user
     const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(400).json({ message: "Invalid phone or password" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid phone or password" });
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
     }
 
-    // ✅ CREATE JWT TOKEN
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // Generate token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d",
+    });
 
-    res.status(200).json({
+    res.json({
+      success: true,
       message: "Login successful",
       token,
       user: {
         id: user._id,
         name: user.name,
+        email: user.email,
         phone: user.phone,
         role: user.role,
+        userType: user.userType,
+        profileComplete: user.profileComplete,
       },
     });
   } catch (error) {
-    console.error("Login Error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Login error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
