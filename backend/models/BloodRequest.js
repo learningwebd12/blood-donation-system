@@ -2,81 +2,33 @@ const mongoose = require("mongoose");
 
 const bloodRequestSchema = new mongoose.Schema(
   {
-    requestedBy: {
+    requester: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-
-    bloodGroup: {
+    bloodType: {
       type: String,
-      enum: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"],
+      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
       required: true,
     },
-
-    unitsRequired: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-
+    units: { type: Number, required: true },
     urgency: {
       type: String,
       enum: ["low", "medium", "high", "critical"],
       default: "medium",
     },
-
-    patientName: {
-      type: String,
-      required: true,
-    },
-
-    hospitalName: {
-      type: String,
-      required: true,
-    },
-
-    contactPerson: {
-      type: String,
-      required: true,
-    },
-
-    contactPhone: {
-      type: String,
-      required: true,
-    },
-
-    location: {
-      district: {
-        type: String,
-        required: true,
-      },
-      municipality: {
-        type: String,
-        required: true,
-      },
-    },
-
+    hospital: { type: String, required: true },
+    district: { type: String, required: true },
+    province: { type: String, required: true },
+    contactPhone: { type: String, required: true },
     status: {
       type: String,
-      enum: ["pending", "accepted", "fulfilled", "cancelled"],
+      enum: ["pending", "fulfilled"],
       default: "pending",
     },
-
-    donorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Donor",
-    },
-
-    neededBy: {
-      type: Date,
-      required: true,
-    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("BloodRequest", bloodRequestSchema);
-  

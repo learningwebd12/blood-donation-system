@@ -39,6 +39,45 @@ export default function Navbar() {
             </Link>
           </li>
         ))}
+
+        {/* Additional links for logged-in users */}
+        {user && user.userType.includes("receiver") && (
+          <>
+            <li>
+              <Link
+                to="/create-blood-request"
+                style={getLinkStyle("CreateBloodRequest")}
+                onMouseEnter={() => setIsHovered("CreateBloodRequest")}
+                onMouseLeave={() => setIsHovered(null)}
+              >
+                Create Blood Request
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/view-requests"
+                style={getLinkStyle("ViewRequests")}
+                onMouseEnter={() => setIsHovered("ViewRequests")}
+                onMouseLeave={() => setIsHovered(null)}
+              >
+                View Requests
+              </Link>
+            </li>
+          </>
+        )}
+
+        {user && user.userType.includes("donor") && (
+          <li>
+            <Link
+              to="/view-requests"
+              style={getLinkStyle("ViewRequests")}
+              onMouseEnter={() => setIsHovered("ViewRequests")}
+              onMouseLeave={() => setIsHovered(null)}
+            >
+              View Requests
+            </Link>
+          </li>
+        )}
       </ul>
 
       {/* Auth Buttons */}
@@ -80,14 +119,8 @@ const styles = {
     zIndex: 1000,
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
   },
-  logoContainer: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-  dropIcon: {
-    fontSize: "1.5rem",
-  },
+  logoContainer: { display: "flex", alignItems: "center", gap: "10px" },
+  dropIcon: { fontSize: "1.5rem" },
   logo: {
     margin: 0,
     fontSize: "1.5rem",
@@ -107,16 +140,8 @@ const styles = {
     fontWeight: "500",
     transition: "color 0.3s ease",
   },
-  authButtons: {
-    display: "flex",
-    alignItems: "center",
-    gap: "15px",
-  },
-  loginBtn: {
-    textDecoration: "none",
-    color: "#fff",
-    fontWeight: "500",
-  },
+  authButtons: { display: "flex", alignItems: "center", gap: "15px" },
+  loginBtn: { textDecoration: "none", color: "#fff", fontWeight: "500" },
   registerBtn: {
     textDecoration: "none",
     backgroundColor: "#fff",
@@ -126,5 +151,21 @@ const styles = {
     fontWeight: "bold",
     transition: "transform 0.2s ease, box-shadow 0.2s ease",
     boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+  },
+  profileBtn: {
+    textDecoration: "none",
+    color: "#fff",
+    fontWeight: "500",
+    padding: "6px 12px",
+    borderRadius: "20px",
+    border: "1px solid #fff",
+  },
+  logoutBtn: {
+    padding: "6px 12px",
+    borderRadius: "20px",
+    border: "1px solid #fff",
+    backgroundColor: "transparent",
+    color: "#fff",
+    cursor: "pointer",
   },
 };
