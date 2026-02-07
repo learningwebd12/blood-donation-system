@@ -1,6 +1,5 @@
 const BloodRequest = require("../models/BloodRequest");
 
-// Create a blood request (receiver)
 exports.createRequest = async (req, res) => {
   try {
     const {
@@ -11,6 +10,7 @@ exports.createRequest = async (req, res) => {
       district,
       contactPhone,
       urgency,
+      location, // <- get lat & lon from frontend
     } = req.body;
 
     if (
@@ -19,11 +19,16 @@ exports.createRequest = async (req, res) => {
       !hospital ||
       !province ||
       !district ||
-      !contactPhone
+      !contactPhone ||
+      !location?.lat ||
+      !location?.lon
     ) {
       return res
         .status(400)
-        .json({ success: false, message: "All fields are required" });
+        .json({
+          success: false,
+          message: "All fields including location are required",
+        });
     }
 
     const request = await BloodRequest.create({
@@ -35,6 +40,7 @@ exports.createRequest = async (req, res) => {
       district,
       contactPhone,
       urgency,
+      location,
     });
 
     res
@@ -46,7 +52,6 @@ exports.createRequest = async (req, res) => {
   }
 };
 
-// Get all requests (donor view)
 exports.getAllRequests = async (req, res) => {
   try {
     const requests = await BloodRequest.find({ status: "pending" })

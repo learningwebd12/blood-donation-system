@@ -27,6 +27,10 @@ const bloodRequestSchema = new mongoose.Schema(
       enum: ["pending", "fulfilled"],
       default: "pending",
     },
+    location: {
+      lat: { type: Number, required: true },
+      lon: { type: Number, required: true },
+    },
   },
   { timestamps: true },
 );
