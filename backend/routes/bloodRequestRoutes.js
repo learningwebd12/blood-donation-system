@@ -9,7 +9,7 @@ const {
 // Receiver creates request
 router.post("/create", auth, createRequest);
 
-// Donor views all requests
+// Donor views requests (optionally filtered by profile province)
 router.get("/all", auth, getAllRequests);
 
 module.exports = router;

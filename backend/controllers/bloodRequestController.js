@@ -1,4 +1,5 @@
 const BloodRequest = require("../models/BloodRequest");
+const calculateDistance = require("../utils/calculateDistance");
 
 exports.createRequest = async (req, res) => {
   try {
@@ -10,7 +11,7 @@ exports.createRequest = async (req, res) => {
       district,
       contactPhone,
       urgency,
-      location, // <- get lat & lon from frontend
+      location, // lat & lon
     } = req.body;
 
     if (
@@ -23,12 +24,10 @@ exports.createRequest = async (req, res) => {
       !location?.lat ||
       !location?.lon
     ) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "All fields including location are required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "All fields including location are required",
+      });
     }
 
     const request = await BloodRequest.create({
@@ -54,7 +53,12 @@ exports.createRequest = async (req, res) => {
 
 exports.getAllRequests = async (req, res) => {
   try {
-    const requests = await BloodRequest.find({ status: "pending" })
+    const { province } = req.query; // frontend bata province pathaune
+
+    let query = { status: "pending" };
+    if (province) query.province = province;
+
+    const requests = await BloodRequest.find(query)
       .populate("requester", "name phone district province")
       .sort({ createdAt: -1 });
 
