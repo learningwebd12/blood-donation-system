@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { getAllRequests } from "../services/bloodRequestService";
+import {
+  getAllRequests,
+  acceptRequest,
+  completeRequest,
+} from "../services/bloodRequestService";
 
 // Haversine formula to calculate distance in KM
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -18,44 +22,38 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 export default function ViewRequests() {
   const [requests, setRequests] = useState([]);
-  const [myLocation] = useState({ lat: null, lon: null });
+  const [myLocation, setMyLocation] = useState({ lat: null, lon: null });
+  const [hoverId, setHoverId] = useState(null);
 
-  // Fetch blood requests from backend
-  useEffect(() => {
-    getAllRequests().then((res) => setRequests(res.data.requests));
-  }, []);
+  const currentUser = JSON.parse(localStorage.getItem("user"));
+  const userProvince = localStorage.getItem("province") || "Bagmati";
 
-  // Live location tracking
+  // Fetch requests
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
-
-          // Get province from user profile or default
-          const userProvince = localStorage.getItem("province") || "Bagmati";
-
+          setMyLocation({ lat, lon });
           getAllRequests(lat, lon, userProvince).then((res) =>
             setRequests(res.data.requests),
           );
         },
         () => {
-          const userProvince = localStorage.getItem("province") || "Bagmati";
           getAllRequests(undefined, undefined, userProvince).then((res) =>
             setRequests(res.data.requests),
           );
         },
       );
     } else {
-      const userProvince = localStorage.getItem("province") || "Bagmati";
       getAllRequests(undefined, undefined, userProvince).then((res) =>
         setRequests(res.data.requests),
       );
     }
-  }, []);
+  }, [userProvince]);
 
-  // Calculate distance dynamically for each request
+  // Add distance to each request
   const requestsWithDistance = requests.map((r) => {
     if (myLocation.lat && r.location?.lat) {
       const distance = calculateDistance(
@@ -64,83 +62,253 @@ export default function ViewRequests() {
         r.location.lat,
         r.location.lon,
       );
-      return { ...r, distance: distance.toFixed(2) };
+      return { ...r, distance: distance.toFixed(1) };
     }
     return r;
   });
 
+  const handleAccept = async (requestId) => {
+    try {
+      await acceptRequest(requestId);
+      // Update UI
+      setRequests((prev) =>
+        prev.map((r) =>
+          r._id === requestId
+            ? { ...r, status: "accepted", acceptedBy: currentUser._id }
+            : r,
+        ),
+      );
+      // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      alert("Failed to accept request");
+    }
+  };
+
+  const handleComplete = async (requestId) => {
+    try {
+      await completeRequest(requestId);
+      setRequests((prev) =>
+        prev.map((r) =>
+          r._id === requestId ? { ...r, status: "completed" } : r,
+        ),
+      );
+      // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      alert("Failed to complete request");
+    }
+  };
+
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Available Blood Requests</h2>
-      {requestsWithDistance.map((r) => (
-        <div
-          key={r._id}
-          style={{
-            border: "1px solid #ccc",
-            margin: "10px",
-            padding: "10px",
-            borderRadius: "8px",
-          }}
-        >
-          <p>
-            <strong>Blood Group:</strong> {r.bloodType}
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <header style={styles.header}>
+          <h2 style={styles.title}>Available Blood Requests</h2>
+          <p style={styles.subtitle}>
+            Every drop counts. Help someone near you today.
           </p>
-          <p>
-            <strong>Units:</strong> {r.units}
-          </p>
-          <p>
-            <strong>Hospital:</strong> {r.hospital}
-          </p>
-          <p>
-            <strong>Location:</strong> {r.district}, {r.province}
-          </p>
-          <p>
-            <strong>Urgency:</strong> {r.urgency}
-          </p>
-          <p>
-            <strong>Contact:</strong> {r.contactPhone}
-          </p>
+        </header>
 
-          {r.distance && (
-            <p style={{ marginTop: "10px", fontWeight: 500 }}>
-              📍 {r.distance} km away
-            </p>
-          )}
-
-          <a href={`tel:${r.contactPhone}`} style={btnStyle}>
-            📞 Call
-          </a>
-          <a
-            href={`https://wa.me/${r.contactPhone}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={btnStyle}
-          >
-            💬 WhatsApp
-          </a>
-          {r.location?.lat && r.location?.lon && (
-            <a
-              href={`https://www.google.com/maps?q=${r.location.lat},${r.location.lon}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={btnStyle}
+        <div style={styles.grid}>
+          {requestsWithDistance.map((r) => (
+            <div
+              key={r._id}
+              onMouseEnter={() => setHoverId(r._id)}
+              onMouseLeave={() => setHoverId(null)}
+              style={{
+                ...styles.card,
+                transform:
+                  hoverId === r._id ? "translateY(-8px)" : "translateY(0)",
+                boxShadow:
+                  hoverId === r._id
+                    ? "0 15px 35px rgba(0,0,0,0.1)"
+                    : "0 8px 20px rgba(0,0,0,0.04)",
+                borderTop:
+                  r.urgency === "critical"
+                    ? "6px solid #d32f2f"
+                    : "6px solid transparent",
+              }}
             >
-              📍 Map
-            </a>
-          )}
+              {/* Top Section: Blood Type & Urgency Status */}
+              <div style={styles.cardTop}>
+                <div style={styles.bloodBadge}>
+                  <span style={styles.labelSmall}>Blood Group</span>
+                  <span style={styles.bloodType}>{r.bloodType}</span>
+                </div>
+                <div
+                  style={{
+                    ...styles.urgencyBadge,
+                    backgroundColor:
+                      r.urgency === "critical" ? "#fff5f5" : "#f8f9fa",
+                    color: r.urgency === "critical" ? "#d32f2f" : "#636e72",
+                    border:
+                      r.urgency === "critical"
+                        ? "1px solid #feb2b2"
+                        : "1px solid #e0e0e0",
+                  }}
+                >
+                  {r.urgency}
+                </div>
+              </div>
+
+              {/* Info Body */}
+              <div style={styles.cardBody}>
+                <div style={styles.infoGroup}>
+                  <label style={styles.fieldLabel}>Hospital Name:</label>
+                  <h3 style={styles.hospitalName}>🏥 {r.hospital}</h3>
+                </div>
+
+                <div style={styles.infoRow}>
+                  <span style={styles.fieldLabel}>Units:</span>
+                  <span style={styles.fieldValue}>{r.units} Units</span>
+                </div>
+
+                <div style={styles.infoRow}>
+                  <span style={styles.fieldLabel}>Location:</span>
+                  <span style={styles.fieldValue}>
+                    {r.district}, {r.province}
+                  </span>
+                </div>
+
+                <div style={styles.infoRow}>
+                  <span style={styles.fieldLabel}>Urgency:</span>
+                  <span
+                    style={{
+                      ...styles.fieldValue,
+                      color: r.urgency === "critical" ? "#d32f2f" : "#2d3436",
+                    }}
+                  >
+                    {r.urgency}
+                  </span>
+                </div>
+
+                <div style={styles.infoRow}>
+                  <span style={styles.fieldLabel}>Contact:</span>
+                  <span style={styles.fieldValue}>{r.contactPhone}</span>
+                </div>
+
+                {r.distance && (
+                  <div style={styles.distanceAlert}>
+                    🚗 <b>{r.distance} km</b> away from your current position
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div style={styles.actionArea}>
+                <a
+                  href={`tel:${r.contactPhone}`}
+                  style={{ ...styles.actionBtn, backgroundColor: "#d32f2f" }}
+                >
+                  Call
+                </a>
+                <a
+                  href={`https://wa.me/${r.contactPhone}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ ...styles.actionBtn, backgroundColor: "#25D366" }}
+                >
+                  WhatsApp
+                </a>
+                {r.location?.lat && (
+                  <a
+                    href={`http://maps.google.com/?q=${r.location.lat},${r.location.lon}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ ...styles.actionBtn, backgroundColor: "#4285F4" }}
+                  >
+                    Map
+                  </a>
+                )}
+
+                {/* Accept / Complete buttons */}
+                {r.status === "pending" &&
+                  currentUser.userType.includes("donor") && (
+                    <button
+                      style={styles.acceptBtn}
+                      onClick={() => handleAccept(r._id)}
+                    >
+                      Accept
+                    </button>
+                  )}
+
+                {r.status === "accepted" &&
+                  r.acceptedBy === currentUser._id && (
+                    <button
+                      style={styles.completeBtn}
+                      onClick={() => handleComplete(r._id)}
+                    >
+                      Complete
+                    </button>
+                  )}
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
-const btnStyle = {
-  display: "inline-block",
-  marginRight: "10px",
-  marginTop: "5px",
-  padding: "6px 12px",
-  borderRadius: "6px",
-  backgroundColor: "#d32f2f",
-  color: "#fff",
-  textDecoration: "none",
+const styles = {
+  page: { padding: "20px" },
+  container: { maxWidth: "900px", margin: "0 auto" },
+  header: { marginBottom: "20px" },
+  title: { fontSize: "28px", fontWeight: "600" },
+  subtitle: { fontSize: "16px", color: "#555" },
+  grid: { display: "flex", flexWrap: "wrap", gap: "20px" },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: "10px",
+    padding: "15px",
+    flex: "1 1 300px",
+    transition: "0.3s",
+  },
+  cardTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "10px",
+  },
+  bloodBadge: { display: "flex", flexDirection: "column" },
+  labelSmall: { fontSize: "12px", color: "#555" },
+  bloodType: { fontSize: "20px", fontWeight: "600" },
+  urgencyBadge: { padding: "4px 8px", borderRadius: "6px", fontSize: "12px" },
+  cardBody: {},
+  infoGroup: { marginBottom: "10px" },
+  hospitalName: { margin: "0" },
+  infoRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "5px",
+  },
+  fieldLabel: { fontWeight: "500" },
+  fieldValue: {},
+  distanceAlert: { marginTop: "10px", fontWeight: "500" },
+  actionArea: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "10px",
+    marginTop: "10px",
+  },
+  actionBtn: {
+    padding: "6px 12px",
+    borderRadius: "6px",
+    color: "#fff",
+    textDecoration: "none",
+  },
+  acceptBtn: {
+    padding: "6px 12px",
+    borderRadius: "6px",
+    backgroundColor: "#ff9800",
+    color: "#fff",
+    border: "none",
+    cursor: "pointer",
+  },
+  completeBtn: {
+    padding: "6px 12px",
+    borderRadius: "6px",
+    backgroundColor: "#4caf50",
+    color: "#fff",
+    border: "none",
+    cursor: "pointer",
+  },
 };

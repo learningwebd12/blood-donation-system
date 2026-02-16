@@ -33,8 +33,8 @@ exports.register = async (req, res) => {
       email,
       phone,
       password: hashedPassword,
-      userType: ["donor"], // ✅ default donor
-      profileComplete: false, // optional, complete later
+      userType: ["donor"], // default donor
+      profileComplete: false,
     });
 
     // Generate token
@@ -47,7 +47,7 @@ exports.register = async (req, res) => {
       message: "User registered successfully",
       token,
       user: {
-        id: user._id,
+        _id: user._id, // ✅ use _id instead of id
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -106,7 +106,7 @@ exports.login = async (req, res) => {
       message: "Login successful",
       token,
       user: {
-        id: user._id,
+        _id: user._id, // ✅ corrected
         name: user.name,
         email: user.email,
         phone: user.phone,

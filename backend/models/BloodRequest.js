@@ -1,38 +1,33 @@
+// models/BloodRequest.js
 const mongoose = require("mongoose");
 
-const bloodRequestSchema = new mongoose.Schema(
+const BloodRequestSchema = new mongoose.Schema(
   {
-    requester: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    bloodType: {
-      type: String,
-      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
-      required: true,
-    },
+    requester: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    bloodType: { type: String, required: true },
     units: { type: Number, required: true },
     urgency: {
       type: String,
-      enum: ["low", "medium", "high", "critical"],
+      enum: ["low", "medium", "high", "critical"], // added 'high'
       default: "medium",
     },
-    hospital: { type: String, required: true },
-    district: { type: String, required: true },
-    province: { type: String, required: true },
-    contactPhone: { type: String, required: true },
+
+    hospital: { type: String },
+    district: { type: String },
+    province: { type: String },
+    contactPhone: { type: String },
     status: {
       type: String,
-      enum: ["pending", "fulfilled"],
+      enum: ["pending", "accepted", "completed"],
       default: "pending",
     },
+    acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // ✅ new field
     location: {
-      lat: { type: Number, required: true },
-      lon: { type: Number, required: true },
+      lat: Number,
+      lon: Number,
     },
   },
   { timestamps: true },
 );
 
-module.exports = mongoose.model("BloodRequest", bloodRequestSchema);
+module.exports = mongoose.model("BloodRequest", BloodRequestSchema);

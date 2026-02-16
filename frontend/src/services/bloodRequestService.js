@@ -1,15 +1,26 @@
-// src/services/bloodRequestService.js
-import API from "./api";
+import API from "../api/api"; // your axios instance
 
-// Get all blood requests with optional lat/lon and province filter
-export const getAllRequests = (lat = null, lon = null, province = null) => {
-  let url = "/blood-request/all?";
+// Fetch all requests (optionally filtered by lat, lon, province)
+export const getAllRequests = (lat, lon, province) => {
+  const params = {};
+  if (lat) params.lat = lat;
+  if (lon) params.lon = lon;
+  if (province) params.province = province;
 
-  if (lat && lon) url += `lat=${lat}&lon=${lon}&`;
-  if (province) url += `province=${province}`;
-
-  return API.get(url);
+  return API.get("/blood-request/all", { params });
 };
 
-// Create a new blood request
-export const createRequest = (data) => API.post("/blood-request/create", data);
+// Receiver creates a new request
+export const createRequest = (requestData) => {
+  return API.post("/blood-request/create", requestData);
+};
+
+// Donor accepts a request
+export const acceptRequest = (requestId) => {
+  return API.patch(`/blood-request/accept/${requestId}`);
+};
+
+// Donor completes a request
+export const completeRequest = (requestId) => {
+  return API.patch(`/blood-request/complete/${requestId}`);
+};

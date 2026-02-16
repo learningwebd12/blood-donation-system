@@ -4,12 +4,22 @@ const auth = require("../middleware/auth");
 const {
   createRequest,
   getAllRequests,
+  acceptRequest,
+  completeRequest,
+  getMyAcceptedRequests,
 } = require("../controllers/bloodRequestController");
 
-// Receiver creates request
+// Receiver creates a new request
 router.post("/create", auth, createRequest);
 
-// Donor views requests (optionally filtered by profile province)
+// Donor or receiver fetches requests (optional: filter by province)
 router.get("/all", auth, getAllRequests);
+
+// Donor accepts a request
+router.patch("/accept/:id", auth, acceptRequest);
+
+// Donor completes a request
+router.patch("/complete/:id", auth, completeRequest);
+router.get("/my-accepted", auth, getMyAcceptedRequests);
 
 module.exports = router;

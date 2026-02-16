@@ -27,3 +27,4 @@ export const getProfile = () => API.get("/profile/me");
 export const logoutUser = () => {
   localStorage.removeItem("token");
 };
+

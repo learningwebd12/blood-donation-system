@@ -11,11 +11,18 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const res = await API.post("/auth/login", { phone, password });
+
+      // Save token
       localStorage.setItem("token", res.data.token);
+
+      // 🔥 ADD THIS LINE
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
       alert("Welcome back!");
-      navigate("/"); // Send them home after login
+      navigate("/");
     } catch (err) {
       alert(err.response?.data?.message || "Invalid credentials");
     } finally {
