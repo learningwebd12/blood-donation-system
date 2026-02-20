@@ -25,11 +25,12 @@ export default function ViewRequests() {
   const [myLocation, setMyLocation] = useState({ lat: null, lon: null });
   const [hoverId, setHoverId] = useState(null);
 
-  const currentUser = JSON.parse(localStorage.getItem("user"));
-  const userProvince = localStorage.getItem("province") || "Bagmati";
+  // Get current logged-in user
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // Fetch requests
   useEffect(() => {
+    const userProvince = localStorage.getItem("province") || "Bagmati";
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -51,9 +52,8 @@ export default function ViewRequests() {
         setRequests(res.data.requests),
       );
     }
-  }, [userProvince]);
+  }, []);
 
-  // Add distance to each request
   const requestsWithDistance = requests.map((r) => {
     if (myLocation.lat && r.location?.lat) {
       const distance = calculateDistance(
@@ -67,34 +67,30 @@ export default function ViewRequests() {
     return r;
   });
 
-  const handleAccept = async (requestId) => {
+  const handleAccept = async (id) => {
     try {
-      await acceptRequest(requestId);
-      // Update UI
-      setRequests((prev) =>
-        prev.map((r) =>
-          r._id === requestId
-            ? { ...r, status: "accepted", acceptedBy: currentUser._id }
-            : r,
-        ),
+      await acceptRequest(id);
+      alert("Request accepted ✅");
+      // Refresh requests
+      const userProvince = localStorage.getItem("province") || "Bagmati";
+      getAllRequests(undefined, undefined, userProvince).then((res) =>
+        setRequests(res.data.requests),
       );
-      // eslint-disable-next-line no-unused-vars
     } catch (err) {
-      alert("Failed to accept request");
+      alert(err.response?.data?.message || "Failed to accept request");
     }
   };
 
-  const handleComplete = async (requestId) => {
+  const handleComplete = async (id) => {
     try {
-      await completeRequest(requestId);
-      setRequests((prev) =>
-        prev.map((r) =>
-          r._id === requestId ? { ...r, status: "completed" } : r,
-        ),
+      await completeRequest(id);
+      alert("Request completed 🎯");
+      const userProvince = localStorage.getItem("province") || "Bagmati";
+      getAllRequests(undefined, undefined, userProvince).then((res) =>
+        setRequests(res.data.requests),
       );
-      // eslint-disable-next-line no-unused-vars
     } catch (err) {
-      alert("Failed to complete request");
+      alert(err.response?.data?.message || "Failed to complete request");
     }
   };
 
@@ -128,7 +124,7 @@ export default function ViewRequests() {
                     : "6px solid transparent",
               }}
             >
-              {/* Top Section: Blood Type & Urgency Status */}
+              {/* Top Section */}
               <div style={styles.cardTop}>
                 <div style={styles.bloodBadge}>
                   <span style={styles.labelSmall}>Blood Group</span>
@@ -150,25 +146,22 @@ export default function ViewRequests() {
                 </div>
               </div>
 
-              {/* Info Body */}
+              {/* Info */}
               <div style={styles.cardBody}>
                 <div style={styles.infoGroup}>
                   <label style={styles.fieldLabel}>Hospital Name:</label>
                   <h3 style={styles.hospitalName}>🏥 {r.hospital}</h3>
                 </div>
-
                 <div style={styles.infoRow}>
                   <span style={styles.fieldLabel}>Units:</span>
                   <span style={styles.fieldValue}>{r.units} Units</span>
                 </div>
-
                 <div style={styles.infoRow}>
                   <span style={styles.fieldLabel}>Location:</span>
                   <span style={styles.fieldValue}>
                     {r.district}, {r.province}
                   </span>
                 </div>
-
                 <div style={styles.infoRow}>
                   <span style={styles.fieldLabel}>Urgency:</span>
                   <span
@@ -180,7 +173,6 @@ export default function ViewRequests() {
                     {r.urgency}
                   </span>
                 </div>
-
                 <div style={styles.infoRow}>
                   <span style={styles.fieldLabel}>Contact:</span>
                   <span style={styles.fieldValue}>{r.contactPhone}</span>
@@ -193,7 +185,7 @@ export default function ViewRequests() {
                 )}
               </div>
 
-              {/* Action Buttons */}
+              {/* Actions */}
               <div style={styles.actionArea}>
                 <a
                   href={`tel:${r.contactPhone}`}
@@ -222,24 +214,26 @@ export default function ViewRequests() {
 
                 {/* Accept / Complete buttons */}
                 {r.status === "pending" &&
-                  currentUser.userType.includes("donor") && (
+                  currentUser.userType?.includes("donor") && (
                     <button
-                      style={styles.acceptBtn}
+                      style={{
+                        ...styles.actionBtn,
+                        backgroundColor: "#1976d2",
+                      }}
                       onClick={() => handleAccept(r._id)}
                     >
                       Accept
                     </button>
                   )}
 
-                {r.status === "accepted" &&
-                  r.acceptedBy === currentUser._id && (
-                    <button
-                      style={styles.completeBtn}
-                      onClick={() => handleComplete(r._id)}
-                    >
-                      Complete
-                    </button>
-                  )}
+                {r.status === "accepted" && r.acceptedBy === currentUser.id && (
+                  <button
+                    style={{ ...styles.actionBtn, backgroundColor: "#FF9800" }}
+                    onClick={() => handleComplete(r._id)}
+                  >
+                    Complete
+                  </button>
+                )}
               </div>
             </div>
           ))}

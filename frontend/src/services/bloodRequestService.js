@@ -24,3 +24,7 @@ export const acceptRequest = (requestId) => {
 export const completeRequest = (requestId) => {
   return API.patch(`/blood-request/complete/${requestId}`);
 };
+
+export const getMyAcceptedRequests = () => {
+  return API.get("/blood-request/my-accepted");
+};

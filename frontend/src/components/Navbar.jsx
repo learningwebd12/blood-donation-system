@@ -67,16 +67,14 @@ export default function Navbar() {
         )}
 
         {user && user.userType.includes("donor") && (
-          <li>
-            <Link
-              to="/view-requests"
-              style={getLinkStyle("ViewRequests")}
-              onMouseEnter={() => setIsHovered("ViewRequests")}
-              onMouseLeave={() => setIsHovered(null)}
-            >
-              View Requests
-            </Link>
-          </li>
+          <>
+            <li>
+              <Link to="/view-requests">View Requests</Link>
+            </li>
+            <li>
+              <Link to="/my-accepted">My Accepted Requests</Link>
+            </li>
+          </>
         )}
       </ul>
 
