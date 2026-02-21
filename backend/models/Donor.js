@@ -78,7 +78,7 @@ const donorSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("Donor", donorSchema);

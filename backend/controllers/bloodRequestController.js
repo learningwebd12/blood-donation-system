@@ -53,12 +53,18 @@ exports.createRequest = async (req, res) => {
 
 exports.getAllRequests = async (req, res) => {
   try {
-    const { province } = req.query; // frontend bata province pathaune
+    const { province } = req.query;
+    const userId = req.user.id; // current logged-in donor
 
-    let query = { status: "pending" };
-    if (province) query.province = province;
+    let baseQuery = {
+      $or: [{ status: "pending" }, { status: "accepted", acceptedBy: userId }],
+    };
 
-    const requests = await BloodRequest.find(query)
+    if (province) {
+      baseQuery.province = province;
+    }
+
+    const requests = await BloodRequest.find(baseQuery)
       .populate("requester", "name phone district province")
       .sort({ createdAt: -1 });
 
