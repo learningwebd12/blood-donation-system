@@ -6,7 +6,9 @@ import MapPicker from "../components/MapPicker";
 
 export default function CreateBloodRequest() {
   const navigate = useNavigate();
+
   const [form, setForm] = useState({
+    patientName: "",
     bloodType: "",
     units: "",
     hospital: "",
@@ -37,17 +39,24 @@ export default function CreateBloodRequest() {
       .catch((err) => console.error(err));
   }, []);
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const useMyLocation = () => {
-    if (!navigator.geolocation) return alert("Geolocation not supported");
+    if (!navigator.geolocation) {
+      return alert("Geolocation not supported");
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setForm({
-          ...form,
-          location: { lat: pos.coords.latitude, lon: pos.coords.longitude },
-        });
+        setForm((prev) => ({
+          ...prev,
+          location: {
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+          },
+        }));
       },
       () => alert("Location permission denied"),
     );
@@ -55,12 +64,17 @@ export default function CreateBloodRequest() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.location.lat) return alert("Please select a location on the map");
+
+    if (!form.location.lat || !form.location.lon) {
+      return alert("Please select a location on the map");
+    }
+
     setLoading(true);
+
     try {
       await createRequest(form);
       alert("Blood request created ✅");
-      navigate("/requests");
+      navigate("/view-requests");
     } catch (err) {
       alert(err.response?.data?.message || "Failed to create request");
     } finally {
@@ -80,12 +94,25 @@ export default function CreateBloodRequest() {
           </div>
 
           <form onSubmit={handleSubmit} style={styles.form}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Patient Name</label>
+              <input
+                name="patientName"
+                placeholder="Enter patient name"
+                style={styles.input}
+                value={form.patientName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
             <div style={styles.row}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Blood Group</label>
                 <select
                   name="bloodType"
                   style={styles.input}
+                  value={form.bloodType}
                   onChange={handleChange}
                   required
                 >
@@ -99,6 +126,7 @@ export default function CreateBloodRequest() {
                   )}
                 </select>
               </div>
+
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Units Needed</label>
                 <input
@@ -106,6 +134,7 @@ export default function CreateBloodRequest() {
                   type="number"
                   placeholder="Qty"
                   style={styles.input}
+                  value={form.units}
                   onChange={handleChange}
                   required
                 />
@@ -118,6 +147,7 @@ export default function CreateBloodRequest() {
                 name="hospital"
                 placeholder="Name of hospital"
                 style={styles.input}
+                value={form.hospital}
                 onChange={handleChange}
                 required
               />
@@ -129,6 +159,7 @@ export default function CreateBloodRequest() {
                 <select
                   name="province"
                   style={styles.input}
+                  value={form.province}
                   onChange={handleChange}
                   required
                 >
@@ -140,11 +171,13 @@ export default function CreateBloodRequest() {
                   ))}
                 </select>
               </div>
+
               <div style={styles.inputGroup}>
                 <label style={styles.label}>District</label>
                 <select
                   name="district"
                   style={styles.input}
+                  value={form.district}
                   onChange={handleChange}
                   required
                 >
@@ -167,14 +200,15 @@ export default function CreateBloodRequest() {
                 >
                   📍 Use My Current Location
                 </button>
+
                 <div style={styles.mapWrapper}>
                   <MapPicker
                     center={districtCenters[form.district] || [27.7172, 85.324]}
                     onSelect={(pos) =>
-                      setForm({
-                        ...form,
+                      setForm((prev) => ({
+                        ...prev,
                         location: { lat: pos.lat, lon: pos.lng },
-                      })
+                      }))
                     }
                   />
                 </div>
@@ -188,10 +222,12 @@ export default function CreateBloodRequest() {
                   name="contactPhone"
                   placeholder="98XXXXXXXX"
                   style={styles.input}
+                  value={form.contactPhone}
                   onChange={handleChange}
                   required
                 />
               </div>
+
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Urgency</label>
                 <select
@@ -199,8 +235,9 @@ export default function CreateBloodRequest() {
                   style={{
                     ...styles.input,
                     backgroundColor:
-                      form.urgency === "critical" ? "#fff5f5" : "#fff",
+                      form.urgency === "critical" ? "#fff5f5" : "#f9f9f9",
                   }}
+                  value={form.urgency}
                   onChange={handleChange}
                 >
                   <option value="low">Low</option>

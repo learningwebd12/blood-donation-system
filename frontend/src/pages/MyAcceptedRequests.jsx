@@ -1,96 +1,63 @@
 import { useEffect, useState } from "react";
-import {
-  getMyAcceptedRequests,
-  completeRequest,
-} from "../services/bloodRequestService";
+import { getMyAcceptedRequests } from "../services/bloodRequestService";
 
-const MyAcceptedRequests = () => {
-  const [requests, setRequests] = useState([]);
+const MyHistory = () => {
+  const [history, setHistory] = useState([]);
 
-  const fetchAccepted = async () => {
-    try {
-      const res = await getMyAcceptedRequests();
-      setRequests(res.data.requests);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const res = await getMyAcceptedRequests();
+        setHistory(res.data.requests);
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
-  useEffect(() => {}, []);
-
-  const handleComplete = async (id) => {
-    try {
-      await completeRequest(id);
-      alert("Donation marked as completed!");
-      fetchAccepted();
-      // eslint-disable-next-line no-unused-vars
-    } catch (error) {
-      alert("Failed to complete request");
-    }
-  };
+    loadHistory();
+  }, []);
 
   return (
-    <div>
-      <h2>My Accepted Requests</h2>
+    <div style={{ padding: "20px" }}>
+      <h2>🩸 Your Completed Donations</h2>
 
-      {requests.length === 0 && <p>No accepted requests yet.</p>}
+      {history.length === 0 && <p>You have not donated blood yet.</p>}
 
-      {requests.map((req) => (
+      {history.map((req) => (
         <div
           key={req._id}
-          style={{ border: "1px solid gray", margin: "10px", padding: "10px" }}
+          style={{
+            border: "1px solid green",
+            borderRadius: "8px",
+            padding: "15px",
+            marginBottom: "15px",
+          }}
         >
           <p>
-            <strong>Patient:</strong> {req.patientName}
+            <strong>Patient:</strong> {req.patientName || "N/A"}
           </p>
           <p>
-            <strong>Blood Group:</strong> {req.bloodGroup}
+            <strong>Blood Group:</strong> {req.bloodType}
           </p>
           <p>
             <strong>Hospital:</strong> {req.hospital}
           </p>
           <p>
-            <strong>Province:</strong> {req.province}
+            <strong>Location:</strong> {req.district}, {req.province}
           </p>
           <p>
-            <strong>Phone:</strong> {req.user?.phone}
+            <strong>Contact:</strong> {req.requester?.phone || "N/A"}
           </p>
-
-          {/* Map */}
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${req.latitude},${req.longitude}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            View Location
-          </a>
-
-          <br />
-
-          {/* Call */}
-          <a href={`tel:${req.user?.phone}`}>Call</a>
-
-          <br />
-
-          {/* WhatsApp */}
-          <a
-            href={`https://wa.me/${req.user?.phone}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            WhatsApp
-          </a>
-
-          <br />
-          <br />
-
-          <button onClick={() => handleComplete(req._id)}>
-            Mark as Completed
-          </button>
+          <p>
+            <strong>Requester Name:</strong> {req.requester?.name || "N/A"}
+          </p>
+          <p>
+            <strong>Status:</strong> ✅ Completed
+          </p>
         </div>
       ))}
     </div>
   );
 };
 
-export default MyAcceptedRequests;
+export default MyHistory;

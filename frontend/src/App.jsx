@@ -13,25 +13,23 @@ import CompleteProfile from "./pages/CompleteProfile";
 import CreateBloodRequest from "./pages/CreateBloodRequest";
 import ViewRequests from "./pages/ViewRequests";
 import MyAcceptRequest from "./pages/MyAcceptedRequests";
+
 export default function App() {
   return (
     <BrowserRouter>
       <Navbar />
 
       <Routes>
-        {/* Public Pages */}
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Protected / User Pages */}
         <Route path="/profile" element={<Profile />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
-        <Route path="/myacceptrequest" element={<MyAcceptRequest />} />
+        <Route path="/my-accepted" element={<MyAcceptRequest />} />
 
-        {/* Blood Request Pages */}
         <Route path="/create-blood-request" element={<CreateBloodRequest />} />
         <Route path="/view-requests" element={<ViewRequests />} />
       </Routes>

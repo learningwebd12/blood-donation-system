@@ -60,7 +60,7 @@ export default function Navbar() {
                 onMouseEnter={() => setIsHovered("ViewRequests")}
                 onMouseLeave={() => setIsHovered(null)}
               >
-                View Requests
+                View Your Requests
               </Link>
             </li>
           </>
