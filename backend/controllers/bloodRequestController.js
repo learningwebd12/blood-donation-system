@@ -1,5 +1,5 @@
 const BloodRequest = require("../models/BloodRequest");
-
+const User = require("../models/User");
 exports.createRequest = async (req, res) => {
   try {
     const {
@@ -146,10 +146,25 @@ exports.completeRequest = async (req, res) => {
     request.status = "completed";
     await request.save();
 
+    const donor = await User.findById(userId);
+
+    if (donor) {
+      donor.lastDonationDate = new Date();
+      donor.totalDonations = (donor.totalDonations || 0) + 1;
+      await donor.save();
+    }
+
     res.json({
       success: true,
       message: "Request completed successfully",
       request,
+      donor: donor
+        ? {
+            lastDonationDate: donor.lastDonationDate,
+            totalDonations: donor.totalDonations,
+            canDonate: donor.canDonate,
+          }
+        : null,
     });
   } catch (error) {
     console.error(error);

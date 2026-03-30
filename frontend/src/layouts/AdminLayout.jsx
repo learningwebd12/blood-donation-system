@@ -16,16 +16,8 @@ export default function AdminLayout({ children }) {
       path: "/admin-dashboard",
       icon: <LayoutDashboard size={18} />,
     },
-    {
-      name: "Users",
-      path: "/admin-users",
-      icon: <Users size={18} />,
-    },
-    {
-      name: "Requests",
-      path: "/admin-requests",
-      icon: <Droplets size={18} />,
-    },
+    { name: "Users", path: "/admin-users", icon: <Users size={18} /> },
+    { name: "Requests", path: "/admin-requests", icon: <Droplets size={18} /> },
   ];
 
   return (

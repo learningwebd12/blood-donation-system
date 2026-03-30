@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 const isAdminRoute = location.pathname.startsWith("/admin");
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUsers from "./pages/AdminUsers";
+import AdminRequests from "./pages/AdminRequests";
 
 // Pages
 import Home from "./pages/Home";
@@ -14,7 +17,7 @@ import CompleteProfile from "./pages/CompleteProfile";
 import CreateBloodRequest from "./pages/CreateBloodRequest";
 import ViewRequests from "./pages/ViewRequests";
 import MyAcceptRequest from "./pages/MyAcceptedRequests";
-import AdminDashboard from "./pages/AdminDashboard";
+
 
 export default function App() {
   return (
@@ -35,6 +38,9 @@ export default function App() {
         <Route path="/create-blood-request" element={<CreateBloodRequest />} />
         <Route path="/view-requests" element={<ViewRequests />} />
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
+
+        <Route path="/admin-users" element={<AdminUsers />} />
+        <Route path="/admin-requests" element={<AdminRequests />} />
       </Routes>
 
       {!isAdminRoute && <Footer />}

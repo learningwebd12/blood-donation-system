@@ -74,12 +74,38 @@ exports.completeProfile = async (req, res) => {
 };
 
 // Get Profile
+
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
-    res.json({ success: true, user });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    let nextEligibleDate = null;
+    let canDonate = true;
+
+    if (user.lastDonationDate) {
+      const nextDate = new Date(user.lastDonationDate);
+      nextDate.setDate(nextDate.getDate() + 90);
+      nextEligibleDate = nextDate;
+      canDonate = new Date() >= nextDate;
+    }
+
+    res.json({
+      success: true,
+      user,
+      eligibility: {
+        canDonate,
+        lastDonationDate: user.lastDonationDate,
+        nextEligibleDate,
+        totalDonations: user.totalDonations || 0,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Get profile error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
