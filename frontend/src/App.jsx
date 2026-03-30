@@ -17,7 +17,7 @@ import CompleteProfile from "./pages/CompleteProfile";
 import CreateBloodRequest from "./pages/CreateBloodRequest";
 import ViewRequests from "./pages/ViewRequests";
 import MyAcceptRequest from "./pages/MyAcceptedRequests";
-
+import "./index.css";
 
 export default function App() {
   return (

@@ -1,52 +1,97 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { motion } from "framer-motion";
 
 export default function Navbar() {
   const [isHovered, setIsHovered] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const getLinkStyle = (id) => ({
-    ...styles.link,
-    color: isHovered === id ? "#ffcccb" : "#fff",
-  });
+  const brandColor = "rgb(177, 18, 38)";
+
+  // Track scroll position for dynamic styling
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
     navigate("/login");
   };
 
+  // Helper to determine active link
+  const isActive = (path) => location.pathname === path;
+
+  const getLinkStyle = (id, path) => ({
+    ...styles.link,
+    color: scrolled
+      ? isHovered === id || isActive(path)
+        ? brandColor
+        : "#4b5563"
+      : isHovered === id || isActive(path)
+        ? "#ffcccb"
+        : "#fff",
+    borderBottom: isActive(path)
+      ? `2px solid ${scrolled ? brandColor : "#fff"}`
+      : "2px solid transparent",
+  });
+
   return (
-    <nav style={styles.nav}>
+    <nav
+      style={{
+        ...styles.nav,
+        backgroundColor: scrolled ? "rgba(255, 255, 255, 0.95)" : brandColor,
+        backdropFilter: scrolled ? "blur(12px)" : "none",
+        boxShadow: scrolled ? "0 10px 30px rgba(0,0,0,0.08)" : "none",
+      }}
+    >
       {/* Logo */}
-      <div style={styles.logoContainer}>
-        <span style={styles.dropIcon}>🩸</span>
-        <h2 style={styles.logo}>LifeStream</h2>
-      </div>
+      <Link to="/" style={styles.logoContainer}>
+        <motion.span
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ repeat: Infinity, duration: 2.5 }}
+          style={styles.dropIcon}
+        >
+          🩸
+        </motion.span>
+        <h2 style={{ ...styles.logo, color: scrolled ? brandColor : "#fff" }}>
+          LifeStream
+        </h2>
+      </Link>
 
-      {/* Menu */}
+      {/* Menu - ALL original logic preserved */}
       <ul style={styles.menu}>
-        {["Home", "About", "Contact"].map((item) => (
-          <li key={item}>
-            <Link
-              to={item === "Home" ? "/" : `/${item.toLowerCase()}`}
-              style={getLinkStyle(item)}
-              onMouseEnter={() => setIsHovered(item)}
-              onMouseLeave={() => setIsHovered(null)}
-            >
-              {item}
-            </Link>
-          </li>
-        ))}
+        {["Home", "About", "Contact"].map((item) => {
+          const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
+          return (
+            <li key={item}>
+              <Link
+                to={path}
+                style={getLinkStyle(item, path)}
+                onMouseEnter={() => setIsHovered(item)}
+                onMouseLeave={() => setIsHovered(null)}
+              >
+                {item}
+              </Link>
+            </li>
+          );
+        })}
 
-        {/* Additional links for logged-in users */}
+        {/* Additional links for logged-in users (Receiver Logic) */}
         {user && user.userType.includes("receiver") && (
           <>
             <li>
               <Link
                 to="/create-blood-request"
-                style={getLinkStyle("CreateBloodRequest")}
+                style={getLinkStyle(
+                  "CreateBloodRequest",
+                  "/create-blood-request",
+                )}
                 onMouseEnter={() => setIsHovered("CreateBloodRequest")}
                 onMouseLeave={() => setIsHovered(null)}
               >
@@ -56,7 +101,7 @@ export default function Navbar() {
             <li>
               <Link
                 to="/view-requests"
-                style={getLinkStyle("ViewRequests")}
+                style={getLinkStyle("ViewRequests", "/view-requests")}
                 onMouseEnter={() => setIsHovered("ViewRequests")}
                 onMouseLeave={() => setIsHovered(null)}
               >
@@ -66,13 +111,28 @@ export default function Navbar() {
           </>
         )}
 
+        {/* Additional links for logged-in users (Donor Logic) */}
         {user && user.userType.includes("donor") && (
           <>
             <li>
-              <Link to="/view-requests">View Requests</Link>
+              <Link
+                to="/view-requests"
+                style={getLinkStyle("ViewRequestsDonor", "/view-requests")}
+                onMouseEnter={() => setIsHovered("ViewRequestsDonor")}
+                onMouseLeave={() => setIsHovered(null)}
+              >
+                View Requests
+              </Link>
             </li>
             <li>
-              <Link to="/my-accepted">My Accepted Requests</Link>
+              <Link
+                to="/my-accepted"
+                style={getLinkStyle("MyAccepted", "/my-accepted")}
+                onMouseEnter={() => setIsHovered("MyAccepted")}
+                onMouseLeave={() => setIsHovered(null)}
+              >
+                My Accepted Requests
+              </Link>
             </li>
           </>
         )}
@@ -82,22 +142,53 @@ export default function Navbar() {
       <div style={styles.authButtons}>
         {!user ? (
           <>
-            <Link to="/login" style={styles.loginBtn}>
+            <Link
+              to="/login"
+              style={{
+                ...styles.loginBtn,
+                color: scrolled ? "#4b5563" : "#fff",
+              }}
+            >
               Login
             </Link>
-            <Link to="/register" style={styles.registerBtn}>
-              Register Now
-            </Link>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link
+                to="/register"
+                style={{
+                  ...styles.registerBtn,
+                  backgroundColor: scrolled ? brandColor : "#fff",
+                  color: scrolled ? "#fff" : brandColor,
+                }}
+              >
+                Register Now
+              </Link>
+            </motion.div>
           </>
         ) : (
-          <>
-            <Link to="/profile" style={styles.profileBtn}>
+          <div style={styles.userSection}>
+            <Link
+              to="/profile"
+              style={{
+                ...styles.profileBtn,
+                borderColor: scrolled ? brandColor : "rgba(255,255,255,0.4)",
+                color: scrolled ? brandColor : "#fff",
+              }}
+            >
               Profile
             </Link>
-            <button onClick={handleLogout} style={styles.logoutBtn}>
+            <button
+              onClick={handleLogout}
+              style={{
+                ...styles.logoutBtn,
+                backgroundColor: scrolled
+                  ? "rgba(177, 18, 38, 0.1)"
+                  : "rgba(255,255,255,0.2)",
+                color: scrolled ? brandColor : "#fff",
+              }}
+            >
               Logout
             </button>
-          </>
+          </div>
         )}
       </div>
     </nav>
@@ -109,22 +200,26 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "15px 40px",
-    background: "linear-gradient(90deg, #8b0000 0%, #d32f2f 100%)",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+    padding: "15px 50px",
     position: "sticky",
     top: 0,
     zIndex: 1000,
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+    fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
   },
-  logoContainer: { display: "flex", alignItems: "center", gap: "10px" },
-  dropIcon: { fontSize: "1.5rem" },
+  logoContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    textDecoration: "none",
+  },
+  dropIcon: { fontSize: "1.6rem" },
   logo: {
     margin: 0,
-    fontSize: "1.5rem",
-    fontWeight: "bold",
-    letterSpacing: "1px",
-    color: "#fff",
+    fontSize: "1.6rem",
+    fontWeight: "800",
+    letterSpacing: "-0.5px",
+    transition: "color 0.4s ease",
   },
   menu: {
     listStyle: "none",
@@ -132,38 +227,47 @@ const styles = {
     gap: "25px",
     margin: 0,
     padding: 0,
+    alignItems: "center",
   },
   link: {
     textDecoration: "none",
-    fontWeight: "500",
-    transition: "color 0.3s ease",
+    fontWeight: "600",
+    fontSize: "0.95rem",
+    paddingBottom: "4px",
+    transition: "all 0.3s ease",
   },
-  authButtons: { display: "flex", alignItems: "center", gap: "15px" },
-  loginBtn: { textDecoration: "none", color: "#fff", fontWeight: "500" },
+  authButtons: { display: "flex", alignItems: "center", gap: "20px" },
+  userSection: { display: "flex", alignItems: "center", gap: "12px" },
+  loginBtn: {
+    textDecoration: "none",
+    fontWeight: "600",
+    fontSize: "0.95rem",
+  },
   registerBtn: {
     textDecoration: "none",
-    backgroundColor: "#fff",
-    color: "#d32f2f",
-    padding: "8px 20px",
-    borderRadius: "25px",
-    fontWeight: "bold",
-    transition: "transform 0.2s ease, box-shadow 0.2s ease",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+    padding: "10px 24px",
+    borderRadius: "14px",
+    fontWeight: "700",
+    fontSize: "0.95rem",
+    boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+    transition: "all 0.3s ease",
   },
   profileBtn: {
     textDecoration: "none",
-    color: "#fff",
-    fontWeight: "500",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    border: "1px solid #fff",
+    fontWeight: "600",
+    padding: "7px 18px",
+    borderRadius: "10px",
+    border: "1px solid",
+    fontSize: "0.9rem",
+    transition: "all 0.3s ease",
   },
   logoutBtn: {
-    padding: "6px 12px",
-    borderRadius: "20px",
-    border: "1px solid #fff",
-    backgroundColor: "transparent",
-    color: "#fff",
+    padding: "8px 18px",
+    borderRadius: "10px",
+    border: "none",
+    fontWeight: "600",
+    fontSize: "0.9rem",
     cursor: "pointer",
+    transition: "all 0.3s ease",
   },
 };
