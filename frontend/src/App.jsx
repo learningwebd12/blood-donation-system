@@ -5,6 +5,7 @@ const isAdminRoute = location.pathname.startsWith("/admin");
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import AdminRequests from "./pages/AdminRequests";
+import AdminContactMessages from "./pages/AdminContactMessages";
 
 // Pages
 import Home from "./pages/Home";
@@ -17,6 +18,7 @@ import CompleteProfile from "./pages/CompleteProfile";
 import CreateBloodRequest from "./pages/CreateBloodRequest";
 import ViewRequests from "./pages/ViewRequests";
 import MyAcceptRequest from "./pages/MyAcceptedRequests";
+
 import "./index.css";
 
 export default function App() {
@@ -41,6 +43,10 @@ export default function App() {
 
         <Route path="/admin-users" element={<AdminUsers />} />
         <Route path="/admin-requests" element={<AdminRequests />} />
+        <Route
+          path="/admin-contact-messages"
+          element={<AdminContactMessages />}
+        />
       </Routes>
 
       {!isAdminRoute && <Footer />}

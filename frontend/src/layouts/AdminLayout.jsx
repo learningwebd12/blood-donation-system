@@ -5,6 +5,7 @@ import {
   Droplets,
   LogOut,
   ShieldCheck,
+  MessageSquare,
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
@@ -17,7 +18,13 @@ export default function AdminLayout({ children }) {
       icon: <LayoutDashboard size={18} />,
     },
     { name: "Users", path: "/admin-users", icon: <Users size={18} /> },
+
     { name: "Requests", path: "/admin-requests", icon: <Droplets size={18} /> },
+    {
+      name: "Contact Messages",
+      path: "/admin-contact-messages",
+      icon: <MessageSquare size={18} />,
+    },
   ];
 
   return (
