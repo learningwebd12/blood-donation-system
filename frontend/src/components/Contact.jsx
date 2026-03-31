@@ -1,13 +1,46 @@
 import React, { useState } from "react";
+import { sendContactMessage } from "../services/contactService";
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    subject: "General Inquiry",
+    message: "",
+  });
+
+  const handleChange = (e) => {
+    setForm((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulate API call
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
+
+    setLoading(true);
+
+    try {
+      await sendContactMessage(form);
+
+      setSubmitted(true);
+      setForm({
+        name: "",
+        email: "",
+        subject: "General Inquiry",
+        message: "",
+      });
+
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to send message");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -21,10 +54,10 @@ export default function Contact() {
       </div>
 
       <div style={styles.container}>
-        {/* Left Side: Contact Info */}
         <div style={styles.infoSide}>
           <div style={styles.infoCard}>
             <h3 style={styles.infoHeading}>Contact Information</h3>
+
             <div style={styles.contactLink}>
               <span style={styles.icon}>📍</span>
               <div>
@@ -32,6 +65,7 @@ export default function Contact() {
                 <p style={styles.infoText}>Kathmandu, Bagmati, Nepal</p>
               </div>
             </div>
+
             <div style={styles.contactLink}>
               <span style={styles.icon}>📞</span>
               <div>
@@ -39,6 +73,7 @@ export default function Contact() {
                 <p style={styles.infoText}>+977 98XXXXXXXX</p>
               </div>
             </div>
+
             <div style={styles.contactLink}>
               <span style={styles.icon}>✉️</span>
               <div>
@@ -56,7 +91,6 @@ export default function Contact() {
           </div>
         </div>
 
-        {/* Right Side: Form */}
         <div style={styles.formSide}>
           {submitted ? (
             <div style={styles.successMsg}>
@@ -70,40 +104,58 @@ export default function Contact() {
                   <label style={styles.label}>Name</label>
                   <input
                     type="text"
+                    name="name"
                     placeholder="Full Name"
                     style={styles.input}
+                    value={form.name}
+                    onChange={handleChange}
                     required
                   />
                 </div>
+
                 <div style={styles.inputGroup}>
                   <label style={styles.label}>Email</label>
                   <input
                     type="email"
+                    name="email"
                     placeholder="Email Address"
                     style={styles.input}
+                    value={form.email}
+                    onChange={handleChange}
                     required
                   />
                 </div>
               </div>
+
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Subject</label>
-                <select style={styles.input}>
-                  <option>General Inquiry</option>
-                  <option>Technical Issue</option>
-                  <option>Partnership</option>
-                  <option>Donation Help</option>
+                <select
+                  name="subject"
+                  style={styles.input}
+                  value={form.subject}
+                  onChange={handleChange}
+                >
+                  <option value="General Inquiry">General Inquiry</option>
+                  <option value="Technical Issue">Technical Issue</option>
+                  <option value="Partnership">Partnership</option>
+                  <option value="Donation Help">Donation Help</option>
                 </select>
               </div>
+
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Message</label>
                 <textarea
+                  name="message"
                   placeholder="How can we help you?"
                   style={{ ...styles.input, height: "150px", resize: "none" }}
+                  value={form.message}
+                  onChange={handleChange}
                   required
                 />
               </div>
-              <button type="submit" style={styles.btn}>
-                Send Message
+
+              <button type="submit" style={styles.btn} disabled={loading}>
+                {loading ? "Sending..." : "Send Message"}
               </button>
             </form>
           )}
@@ -202,6 +254,7 @@ const styles = {
   row: {
     display: "flex",
     gap: "20px",
+    flexWrap: "wrap",
   },
   inputGroup: {
     display: "flex",

@@ -27,6 +27,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/profile", require("./routes/profileRoutes"));
 app.use("/api/blood-request", require("./routes/bloodRequestRoutes"));
+app.use("/api/contact", require("./routes/contactRoutes"));
 
 app.use("/api/admin", require("./routes/adminRoutes"));
 
