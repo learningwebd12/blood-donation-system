@@ -6,7 +6,7 @@ import {
   completeRequest,
 } from "../services/bloodRequestService";
 
-// Distance calculator
+// Distance calculator logic preserved
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -100,28 +100,6 @@ export default function ViewRequests() {
 
   return (
     <div style={styles.page}>
-      <style>{`
-        .action-button {
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          font-weight: 700;
-          border-radius: 12px;
-          cursor: pointer;
-          border: none;
-          text-decoration: none;
-          font-size: 0.9rem;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .action-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-          filter: brightness(1.1);
-        }
-      `}</style>
-
       <motion.div
         initial={{ opacity: 0, y: -25 }}
         animate={{ opacity: 1, y: 0 }}
@@ -131,28 +109,14 @@ export default function ViewRequests() {
           🩸 Urgent Requests
         </h1>
         <p style={styles.subtitle}>
-          Find people near you who need immediate help. Every drop counts.
+          Every drop counts. Find someone nearby who needs your help.
         </p>
       </motion.div>
 
       {loading ? (
-        <div style={styles.loadingBox}>
-          <div className="spinner"></div>
-          <p>Finding urgent requests...</p>
-        </div>
+        <div style={styles.loadingBox}>Searching for requests...</div>
       ) : requestsWithDistance.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={styles.emptyBox}
-        >
-          <p style={{ fontSize: "1.2rem", color: "#64748b" }}>
-            No active requests in {userProvince}.
-          </p>
-          <p style={{ marginTop: "10px", fontSize: "0.9rem" }}>
-            Check back later or change your location settings.
-          </p>
-        </motion.div>
+        <div style={styles.emptyBox}>No active requests in {userProvince}.</div>
       ) : (
         <div style={styles.grid}>
           <AnimatePresence>
@@ -173,145 +137,110 @@ export default function ViewRequests() {
                 >
                   <div style={styles.cardHeader}>
                     <div style={styles.bloodGroup}>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          display: "block",
-                          color: "#94a3b8",
-                        }}
-                      >
-                        GROUP
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "1.5rem",
-                          fontWeight: "800",
-                          color: brandColor,
-                        }}
-                      >
+                      <span style={styles.groupLabel}>BLOOD TYPE</span>
+                      <span style={{ ...styles.groupValue, color: brandColor }}>
                         {r.bloodType}
                       </span>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <span
-                        style={{
-                          ...styles.statusBadge,
-                          background:
-                            r.status === "pending"
-                              ? "rgba(255, 152, 0, 0.1)"
-                              : "rgba(177, 18, 38, 0.1)",
-                          color:
-                            r.status === "pending" ? "#f59e0b" : brandColor,
-                        }}
-                      >
-                        {r.status === "pending"
-                          ? "● Seeking Donor"
-                          : "✓ Accepted"}
-                      </span>
-                    </div>
+                    <span
+                      style={{
+                        ...styles.statusBadge,
+                        background:
+                          r.status === "pending"
+                            ? "rgba(255, 152, 0, 0.1)"
+                            : "rgba(34, 197, 94, 0.1)",
+                        color: r.status === "pending" ? "#f59e0b" : "#22c55e",
+                      }}
+                    >
+                      {r.status === "pending" ? "Seeking Donor" : "Accepted"}
+                    </span>
                   </div>
 
-                  <div style={styles.hospitalRow}>
+                  <div style={styles.hospitalInfo}>
                     <h3 style={styles.hospitalName}>🏥 {r.hospital}</h3>
                     <p style={styles.locationSub}>
                       {r.district}, {r.province}
                     </p>
+                    <p style={styles.postedBy}>
+                      Posted by: <b>{r.requester?.name || "User"}</b>
+                    </p>
                   </div>
 
-                  <div style={styles.statsGrid}>
-                    <div style={styles.statBox}>
-                      <span style={styles.statLabel}>UNITS</span>
+                  <div style={styles.statsRow}>
+                    <div style={styles.statItem}>
+                      <span style={styles.statLabel}>UNITS NEEDED</span>
                       <span style={styles.statValue}>{r.units}</span>
                     </div>
-                    <div style={styles.statBox}>
-                      <span style={styles.statLabel}>PATIENT</span>
-                      <span style={styles.statValue}>
-                        {r.patientName || "Confidential"}
-                      </span>
+                    <div style={styles.statItem}>
+                      <span style={styles.statLabel}>PHONE</span>
+                      <span style={styles.statValue}>{r.contactPhone}</span>
                     </div>
                   </div>
 
                   {r.distance && (
-                    <div
-                      style={{
-                        ...styles.distanceTag,
-                        backgroundColor: "rgba(177, 18, 38, 0.05)",
-                        color: brandColor,
-                      }}
-                    >
-                      📍 {r.distance} km from your location
+                    <div style={styles.distanceBadge}>
+                      📍 {r.distance} km from your current location
                     </div>
                   )}
 
-                  <div style={styles.footer}>
-                    <p style={styles.requestedBy}>
-                      Posted by:{" "}
-                      <span style={{ fontWeight: "600", color: "#334155" }}>
-                        {r.requester?.name || "User"}
-                      </span>
-                    </p>
+                  <div style={styles.actions}>
+                    {currentUser.userType?.includes("donor") &&
+                      r.status === "pending" && (
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          style={{ ...styles.btn, background: brandColor }}
+                          onClick={() => handleAccept(r._id)}
+                        >
+                          Accept to Save Life
+                        </motion.button>
+                      )}
 
-                    <div style={styles.buttonGroup}>
-                      {currentUser.userType?.includes("donor") &&
-                        r.status === "pending" && (
-                          <button
-                            className="action-button"
-                            style={{
-                              background: brandColor,
-                              color: "white",
-                              width: "100%",
-                              padding: "12px",
-                            }}
-                            onClick={() => handleAccept(r._id)}
-                          >
-                            Accept to Save Life
-                          </button>
-                        )}
+                    {r.status === "accepted" && isAcceptedByMe && (
+                      <div style={styles.acceptedGrid}>
+                        <a
+                          href={`tel:${r.contactPhone}`}
+                          style={{ ...styles.btn, background: "#2563eb" }}
+                        >
+                          📞 Call
+                        </a>
+                        <a
+                          href={`https://wa.me/${r.contactPhone}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ ...styles.btn, background: "#1faa59" }}
+                        >
+                          💬 Chat
+                        </a>
 
-                      {r.status === "accepted" && isAcceptedByMe && (
-                        <div style={styles.acceptedActions}>
+                        {/* MAP BUTTON RE-ADDED & FIXED */}
+                        {r.location?.lat && (
                           <a
-                            href={`tel:${r.contactPhone}`}
-                            className="action-button"
-                            style={{
-                              background: "#2563eb",
-                              color: "white",
-                              flex: 1,
-                              padding: "10px",
-                            }}
-                          >
-                            📞 Call
-                          </a>
-                          <a
-                            href={`https://wa.me/${r.contactPhone}`}
+                            href={`https://www.google.com/maps?q=${r.location.lat},${r.location.lon}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="action-button"
                             style={{
-                              background: "#22c55e",
-                              color: "white",
-                              flex: 1,
-                              padding: "10px",
-                            }}
-                          >
-                            💬 Chat
-                          </a>
-                          <button
-                            className="action-button"
-                            style={{
-                              background: "#1e293b",
-                              color: "white",
+                              ...styles.btn,
+                              background: "#4285F4",
                               width: "100%",
-                              padding: "12px",
-                              marginTop: "8px",
                             }}
-                            onClick={() => handleComplete(r._id)}
                           >
-                            Mark as Completed
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                            📍 View on Map
+                          </a>
+                        )}
+
+                        <button
+                          style={{
+                            ...styles.btn,
+                            background: "#1e293b",
+                            width: "100%",
+                          }}
+                          onClick={() => handleComplete(r._id)}
+                        >
+                          Mark as Completed
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -327,96 +256,106 @@ const styles = {
   page: {
     minHeight: "100vh",
     padding: "40px 20px",
-    background:
-      "linear-gradient(135deg, #fff5f5 0%, #ffffff 50%, #f8fafc 100%)",
-    fontFamily: "'Segoe UI', Roboto, sans-serif",
+    background: "#fdfdfd",
+    fontFamily: "'Segoe UI', sans-serif",
   },
   header: { textAlign: "center", marginBottom: "40px" },
-  title: { fontSize: "2.4rem", fontWeight: "800", marginBottom: "10px" },
+  title: { fontSize: "2.2rem", fontWeight: "800", marginBottom: "10px" },
   subtitle: { color: "#64748b", fontSize: "1.1rem" },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
     gap: "25px",
     maxWidth: "1200px",
     margin: "0 auto",
   },
   card: {
-    background: "white",
+    background: "#fff",
     borderRadius: "24px",
     padding: "24px",
     boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
     border: "1px solid #f1f5f9",
-    position: "relative",
     display: "flex",
     flexDirection: "column",
+    gap: "15px",
   },
   cardHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "20px",
   },
   bloodGroup: {
-    background: "rgba(177, 18, 38, 0.05)",
-    padding: "10px 15px",
-    borderRadius: "16px",
+    background: "#fff5f5",
+    padding: "8px 12px",
+    borderRadius: "12px",
     textAlign: "center",
-    minWidth: "70px",
   },
+  groupLabel: {
+    display: "block",
+    fontSize: "0.65rem",
+    fontWeight: "700",
+    color: "#94a3b8",
+  },
+  groupValue: { fontSize: "1.4rem", fontWeight: "800" },
   statusBadge: {
     padding: "6px 12px",
     borderRadius: "20px",
     fontSize: "0.75rem",
     fontWeight: "700",
-    textTransform: "uppercase",
   },
-  hospitalRow: { marginBottom: "18px" },
   hospitalName: {
-    fontSize: "1.15rem",
+    fontSize: "1.2rem",
     fontWeight: "700",
     color: "#1e293b",
-    margin: "0 0 4px 0",
+    margin: 0,
   },
-  locationSub: { fontSize: "0.9rem", color: "#64748b", margin: 0 },
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "12px",
-    marginBottom: "18px",
-  },
-  statBox: {
+  locationSub: { fontSize: "0.9rem", color: "#64748b", margin: "4px 0" },
+  postedBy: { fontSize: "0.85rem", color: "#94a3b8", margin: 0 },
+  statsRow: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" },
+  statItem: {
     background: "#f8fafc",
-    padding: "12px",
-    borderRadius: "14px",
+    padding: "10px",
+    borderRadius: "12px",
     border: "1px solid #edf2f7",
   },
   statLabel: {
     display: "block",
-    fontSize: "0.7rem",
+    fontSize: "0.65rem",
     color: "#94a3b8",
     fontWeight: "700",
-    marginBottom: "2px",
   },
   statValue: { fontSize: "0.95rem", fontWeight: "600", color: "#334155" },
-  distanceTag: {
+  distanceBadge: {
+    background: "rgba(177, 18, 38, 0.05)",
+    color: "rgb(177, 18, 38)",
     padding: "10px",
     borderRadius: "12px",
     fontSize: "0.85rem",
     fontWeight: "600",
     textAlign: "center",
-    marginBottom: "20px",
   },
-  requestedBy: { fontSize: "0.85rem", color: "#94a3b8", marginBottom: "15px" },
-  acceptedActions: { display: "flex", flexWrap: "wrap", gap: "8px" },
-  loadingBox: { textAlign: "center", padding: "100px 0", color: "#64748b" },
+  btn: {
+    border: "none",
+    borderRadius: "12px",
+    padding: "12px",
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: "0.9rem",
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    transition: "all 0.3s ease",
+  },
+  acceptedGrid: { display: "flex", flexWrap: "wrap", gap: "10px" },
+  loadingBox: { textAlign: "center", padding: "50px", color: "#64748b" },
   emptyBox: {
-    background: "white",
-    padding: "60px",
-    borderRadius: "24px",
     textAlign: "center",
-    maxWidth: "500px",
-    margin: "0 auto",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
+    padding: "50px",
+    color: "#64748b",
+    background: "#fff",
+    borderRadius: "20px",
   },
 };

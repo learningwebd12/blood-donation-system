@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { completeProfile, getLocationData } from "../services/profileService";
 
 export default function CompleteProfile() {
@@ -8,8 +9,10 @@ export default function CompleteProfile() {
   const [provinces, setProvinces] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const brandColor = "rgb(177, 18, 38)";
+
   const [form, setForm] = useState({
-    userType: [],
+    userType: [], // Backend expects an array, so we keep it as an array
     bloodType: "",
     province: "",
     district: "",
@@ -20,25 +23,29 @@ export default function CompleteProfile() {
 
   useEffect(() => {
     getLocationData().then((res) => {
-      setProvinces(res.data.provinces);
-      setLocations(res.data.locations);
+      setProvinces(res.data.provinces || []);
+      setLocations(res.data.locations || {});
     });
   }, []);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
+  // Exclusive Selection Logic: Only one type at a time
   const handleUserTypeChange = (type) => {
     setForm((prev) => ({
       ...prev,
-      userType: prev.userType.includes(type)
-        ? prev.userType.filter((t) => t !== type)
-        : [...prev.userType, type],
+      userType: [type], // Replaces previous selection
+      bloodType: type === "donor" ? prev.bloodType : "", // Clear bloodType if not donor
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.userType.length === 0) {
+      alert("Please select whether you are a Donor or a Receiver.");
+      return;
+    }
     setLoading(true);
     try {
       await completeProfile(form);
@@ -53,56 +60,80 @@ export default function CompleteProfile() {
 
   return (
     <div style={styles.wrapper}>
-      <div style={styles.card}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        style={styles.card}
+      >
         <div style={styles.header}>
-          <h2 style={styles.title}>Finish Your Setup</h2>
+          <div style={{ ...styles.iconCircle, color: brandColor }}>🩸</div>
+          <h2 style={styles.title}>Complete Your Setup</h2>
           <p style={styles.subtitle}>
-            Tell us a bit more to help you connect with the right people.
+            Join the LifeStream network and start saving lives today.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={styles.form}>
-          {/* USER TYPE CHIPS */}
+          {/* EXCLUSIVE USER TYPE SELECTION */}
           <div style={styles.inputGroup}>
-            <label style={styles.label}>I want to be a:</label>
+            <label style={styles.label}>I want to register as a:</label>
             <div style={styles.chipGroup}>
-              {["donor", "receiver"].map((type) => (
-                <div
-                  key={type}
-                  onClick={() => handleUserTypeChange(type)}
-                  style={{
-                    ...styles.chip,
-                    backgroundColor: form.userType.includes(type)
-                      ? "#d32f2f"
-                      : "#f0f0f0",
-                    color: form.userType.includes(type) ? "#fff" : "#444",
-                  }}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </div>
-              ))}
+              {["donor", "receiver"].map((type) => {
+                const isActive = form.userType.includes(type);
+                return (
+                  <motion.div
+                    key={type}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleUserTypeChange(type)}
+                    style={{
+                      ...styles.chip,
+                      backgroundColor: isActive ? brandColor : "#fff",
+                      color: isActive ? "#fff" : "#64748b",
+                      border: `2px solid ${isActive ? brandColor : "#e2e8f0"}`,
+                      boxShadow: isActive
+                        ? `0 8px 20px rgba(177, 18, 38, 0.2)`
+                        : "none",
+                    }}
+                  >
+                    {type === "donor" ? "🙋‍♂️ Donor" : "🏥 Receiver"}
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
 
-          {/* BLOOD TYPE (Conditional) */}
-          {form.userType.includes("donor") && (
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Blood Group</label>
-              <select
-                name="bloodType"
-                style={styles.select}
-                onChange={handleChange}
-                required
+          <AnimatePresence>
+            {form.userType.includes("donor") && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                style={{ overflow: "hidden" }}
               >
-                <option value="">Select Group</option>
-                {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((b) => (
-                  <option key={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-          )}
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Blood Group</label>
+                  <select
+                    name="bloodType"
+                    style={styles.select}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Select Group</option>
+                    {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
+                      (b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* LOCATION ROW */}
           <div style={styles.row}>
             <div style={styles.inputGroup}>
               <label style={styles.label}>Province</label>
@@ -114,7 +145,9 @@ export default function CompleteProfile() {
               >
                 <option value="">Select</option>
                 {provinces.map((p) => (
-                  <option key={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
               </select>
             </div>
@@ -128,20 +161,21 @@ export default function CompleteProfile() {
               >
                 <option value="">Select</option>
                 {locations[form.province]?.map((d) => (
-                  <option key={d}>{d}</option>
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* HEALTH STATS ROW */}
-          <div style={styles.row}>
+          <div style={styles.statsRow}>
             <div style={styles.inputGroup}>
               <label style={styles.label}>Age</label>
               <input
                 name="age"
                 type="number"
-                placeholder="yrs"
+                placeholder="Yrs"
                 style={styles.input}
                 onChange={handleChange}
               />
@@ -171,70 +205,117 @@ export default function CompleteProfile() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading} style={styles.btn}>
-            {loading ? "Saving..." : "Complete Profile"}
-          </button>
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            type="submit"
+            disabled={loading}
+            style={{ ...styles.btn, backgroundColor: brandColor }}
+          >
+            {loading ? "Processing..." : "Complete Registration"}
+          </motion.button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
 const styles = {
   wrapper: {
-    padding: "40px 20px",
+    padding: "50px 0",
     display: "flex",
     justifyContent: "center",
-    backgroundColor: "#f8f9fa",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #fffafa 0%, #fdf2f2 100%)",
     minHeight: "100vh",
+    fontFamily: "'Inter', sans-serif",
   },
   card: {
-    width: "100%",
-    maxWidth: "450px",
-    backgroundColor: "#fff",
-    padding: "40px",
-    borderRadius: "16px",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
+    width: "80%", // SET TO 80% WIDTH
+
+    backgroundColor: "#ffffff",
+    padding: "45px",
+    borderRadius: "15px",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.08)",
+    border: "1px solid #f1f5f9",
   },
-  header: { textAlign: "center", marginBottom: "30px" },
-  title: { margin: "0 0 10px 0", color: "#2d3436" },
-  subtitle: { fontSize: "0.9rem", color: "#636e72" },
-  form: { display: "flex", flexDirection: "column", gap: "20px" },
-  row: { display: "flex", gap: "15px" },
-  inputGroup: { display: "flex", flexDirection: "column", gap: "8px", flex: 1 },
-  label: { fontSize: "0.85rem", fontWeight: "600", color: "#444" },
-  chipGroup: { display: "flex", gap: "10px" },
-  chip: {
-    padding: "10px 20px",
-    borderRadius: "20px",
-    cursor: "pointer",
+  header: { textAlign: "center", marginBottom: "35px" },
+  iconCircle: {
+    fontSize: "2.2rem",
+    background: "#fff5f5",
+    width: "70px",
+    height: "70px",
+    borderRadius: "22px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0 auto 20px",
+  },
+  title: {
+    margin: "0 0 10px 0",
+    color: "#0f172a",
+    fontSize: "1.8rem",
+    fontWeight: "850",
+  },
+  subtitle: { fontSize: "1rem", color: "#64748b", lineHeight: "1.6" },
+  form: { display: "flex", flexDirection: "column", gap: "24px" },
+  row: { display: "flex", gap: "20px" },
+  statsRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: "15px",
+  },
+  inputGroup: { display: "flex", flexDirection: "column", gap: "10px" },
+  label: {
     fontSize: "0.9rem",
-    fontWeight: "500",
-    transition: "all 0.2s ease",
+    fontWeight: "700",
+    color: "#334155",
+    marginLeft: "2px",
+  },
+  chipGroup: { display: "flex", gap: "15px" },
+  chip: {
+    flex: 1,
+    padding: "16px",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontSize: "1rem",
+    fontWeight: "700",
+    textAlign: "center",
+    transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+    fontFamily: "poppins",
   },
   input: {
-    padding: "12px",
-    borderRadius: "8px",
-    border: "1px solid #ddd",
-    fontSize: "0.95rem",
+    padding: "15px",
+    borderRadius: "10px",
+    border: "1px solid #e2e8f0",
+    fontSize: "1rem",
+    outline: "none",
+    backgroundColor: "#f8fafc",
+    transition: "border-color 0.3s",
+    fontFamily: "poppins",
   },
   select: {
-    padding: "12px",
-    borderRadius: "8px",
-    border: "1px solid #ddd",
-    backgroundColor: "#fff",
-    fontSize: "0.95rem",
+    padding: "15px",
+    borderRadius: "10px",
+    border: "1px solid #e2e8f0",
+    backgroundColor: "#f8fafc",
+    fontSize: "1rem",
+    outline: "none",
+    cursor: "pointer",
+    appearance: "none",
+    // Removes default arrow for custom look if desired
   },
   btn: {
     marginTop: "10px",
-    padding: "14px",
-    backgroundColor: "#d32f2f",
+    padding: "18px",
     color: "#fff",
     border: "none",
-    borderRadius: "8px",
-    fontWeight: "bold",
-    fontSize: "1rem",
+    borderRadius: "10px",
+    fontWeight: "600",
+    fontSize: "1.1rem",
     cursor: "pointer",
-    boxShadow: "0 4px 10px rgba(211, 47, 47, 0.2)",
+    boxShadow: "0 12px 24px -6px rgba(177, 18, 38, 0.3)",
+    transition: "all 0.3s ease",
+    fontFamily: "poppins",
   },
 };

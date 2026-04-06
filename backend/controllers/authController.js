@@ -7,7 +7,6 @@ exports.register = async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
 
-    // Validation
     if (!name || !email || !phone || !password) {
       return res.status(400).json({
         success: false,
@@ -15,7 +14,6 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Check if user exists
     const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
     if (existingUser) {
       return res.status(400).json({
@@ -24,20 +22,17 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user with donor as default
     const user = await User.create({
       name,
       email,
       phone,
       password: hashedPassword,
-      userType: ["donor"], // default donor
+      userType: ["donor"],
       profileComplete: false,
     });
 
-    // Generate token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "30d",
     });
@@ -47,7 +42,7 @@ exports.register = async (req, res) => {
       message: "User registered successfully",
       token,
       user: {
-        _id: user._id, // ✅ use _id instead of id
+        _id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -70,7 +65,6 @@ exports.login = async (req, res) => {
   try {
     const { phone, password } = req.body;
 
-    // Validation
     if (!phone || !password) {
       return res.status(400).json({
         success: false,
@@ -78,7 +72,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Find user
     const user = await User.findOne({ phone });
     if (!user) {
       return res.status(401).json({
@@ -87,7 +80,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -96,7 +88,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Generate token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "30d",
     });
@@ -106,7 +97,7 @@ exports.login = async (req, res) => {
       message: "Login successful",
       token,
       user: {
-        _id: user._id, // ✅ corrected
+        _id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -120,6 +111,67 @@ exports.login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+// ADMIN LOGIN
+exports.adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    if (user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only.",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      success: true,
+      message: "Admin login successful",
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Admin login error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
     });
   }
 };

@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -9,6 +9,12 @@ import {
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/admin-login");
+  };
   const location = useLocation();
 
   const menuItems = [
@@ -62,7 +68,7 @@ export default function AdminLayout({ children }) {
           </nav>
         </div>
 
-        <button style={styles.logoutBtn}>
+        <button style={styles.logoutBtn} onClick={handleLogout}>
           <LogOut size={18} />
           <span>Logout</span>
         </button>

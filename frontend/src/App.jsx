@@ -6,6 +6,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import AdminRequests from "./pages/AdminRequests";
 import AdminContactMessages from "./pages/AdminContactMessages";
+import AdminLogin from "./pages/AdminLogin";
 
 // Pages
 import Home from "./pages/Home";
@@ -39,6 +40,7 @@ export default function App() {
 
         <Route path="/create-blood-request" element={<CreateBloodRequest />} />
         <Route path="/view-requests" element={<ViewRequests />} />
+
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
 
         <Route path="/admin-users" element={<AdminUsers />} />
@@ -47,6 +49,7 @@ export default function App() {
           path="/admin-contact-messages"
           element={<AdminContactMessages />}
         />
+        <Route path="/admin-login" element={<AdminLogin />} />
       </Routes>
 
       {!isAdminRoute && <Footer />}

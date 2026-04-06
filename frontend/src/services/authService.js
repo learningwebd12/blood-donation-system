@@ -1,6 +1,5 @@
 import axios from "axios";
 
-
 const API = axios.create({
   baseURL: "http://localhost:5000/api",
 });
@@ -28,3 +27,6 @@ export const logoutUser = () => {
   localStorage.removeItem("token");
 };
 
+export const adminLogin = (formData) => {
+  return API.post("/auth/admin-login", formData);
+};
