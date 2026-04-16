@@ -8,11 +8,12 @@ export default function CompleteProfile() {
   const [locations, setLocations] = useState({});
   const [provinces, setProvinces] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const brandColor = "rgb(177, 18, 38)";
 
   const [form, setForm] = useState({
-    userType: [], // Backend expects an array, so we keep it as an array
+    userType: [],
     bloodType: "",
     province: "",
     district: "",
@@ -28,31 +29,62 @@ export default function CompleteProfile() {
     });
   }, []);
 
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // Blocks '-' and 'e' keys and shows error
+  const blockInvalidChar = (e) => {
+    if (e.key === "-" || e.key === "e" || e.key === "+") {
+      e.preventDefault();
+      setError("Negative values or special characters are not allowed.");
+    }
+  };
 
-  // Exclusive Selection Logic: Only one type at a time
+  const handleChange = (e) => {
+    const { name, value, type } = e.target;
+    setError("");
+
+    // Safety check for manual typing or pasting
+    if (type === "number" && value.includes("-")) {
+      setError("Negative values are not allowed.");
+      return;
+    }
+
+    setForm({ ...form, [name]: value });
+  };
+
   const handleUserTypeChange = (type) => {
+    setError("");
     setForm((prev) => ({
       ...prev,
-      userType: [type], // Replaces previous selection
-      bloodType: type === "donor" ? prev.bloodType : "", // Clear bloodType if not donor
+      userType: [type],
+      bloodType: type === "donor" ? prev.bloodType : "",
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
     if (form.userType.length === 0) {
-      alert("Please select whether you are a Donor or a Receiver.");
+      setError("Please select whether you are a Donor or a Receiver.");
       return;
     }
+
+    if (form.age && (form.age <= 0 || form.age > 120)) {
+      setError("Please enter a valid age.");
+      return;
+    }
+
+    if (form.weight && (form.weight <= 0 || form.weight > 500)) {
+      setError("Please enter a valid weight.");
+      return;
+    }
+
     setLoading(true);
     try {
       await completeProfile(form);
       alert("Profile completed successfully ✅");
       navigate("/profile");
     } catch (err) {
-      alert(err.response?.data?.message || "Profile update failed");
+      setError(err.response?.data?.message || "Profile update failed");
     } finally {
       setLoading(false);
     }
@@ -75,7 +107,6 @@ export default function CompleteProfile() {
         </div>
 
         <form onSubmit={handleSubmit} style={styles.form}>
-          {/* EXCLUSIVE USER TYPE SELECTION */}
           <div style={styles.inputGroup}>
             <label style={styles.label}>I want to register as a:</label>
             <div style={styles.chipGroup}>
@@ -117,6 +148,7 @@ export default function CompleteProfile() {
                   <select
                     name="bloodType"
                     style={styles.select}
+                    value={form.bloodType}
                     onChange={handleChange}
                     required
                   >
@@ -140,6 +172,7 @@ export default function CompleteProfile() {
               <select
                 name="province"
                 style={styles.select}
+                value={form.province}
                 onChange={handleChange}
                 required
               >
@@ -156,6 +189,7 @@ export default function CompleteProfile() {
               <select
                 name="district"
                 style={styles.select}
+                value={form.district}
                 onChange={handleChange}
                 required
               >
@@ -175,8 +209,11 @@ export default function CompleteProfile() {
               <input
                 name="age"
                 type="number"
+                min="1"
                 placeholder="Yrs"
                 style={styles.input}
+                value={form.age}
+                onKeyDown={blockInvalidChar}
                 onChange={handleChange}
               />
             </div>
@@ -185,8 +222,11 @@ export default function CompleteProfile() {
               <input
                 name="weight"
                 type="number"
+                min="1"
                 placeholder="kg"
                 style={styles.input}
+                value={form.weight}
+                onKeyDown={blockInvalidChar}
                 onChange={handleChange}
               />
             </div>
@@ -195,6 +235,7 @@ export default function CompleteProfile() {
               <select
                 name="gender"
                 style={styles.select}
+                value={form.gender}
                 onChange={handleChange}
               >
                 <option value="">--</option>
@@ -204,6 +245,8 @@ export default function CompleteProfile() {
               </select>
             </div>
           </div>
+
+          {error && <span style={styles.errorText}>{error}</span>}
 
           <motion.button
             whileHover={{ scale: 1.01 }}
@@ -228,11 +271,9 @@ const styles = {
     alignItems: "center",
     background: "linear-gradient(135deg, #fffafa 0%, #fdf2f2 100%)",
     minHeight: "100vh",
-    fontFamily: "'Inter', sans-serif",
   },
   card: {
-    width: "80%", // SET TO 80% WIDTH
-
+    width: "80%",
     backgroundColor: "#ffffff",
     padding: "45px",
     borderRadius: "15px",
@@ -266,12 +307,7 @@ const styles = {
     gap: "15px",
   },
   inputGroup: { display: "flex", flexDirection: "column", gap: "10px" },
-  label: {
-    fontSize: "0.9rem",
-    fontWeight: "700",
-    color: "#334155",
-    marginLeft: "2px",
-  },
+  label: { fontSize: "0.9rem", fontWeight: "700", color: "#334155" },
   chipGroup: { display: "flex", gap: "15px" },
   chip: {
     flex: 1,
@@ -281,8 +317,6 @@ const styles = {
     fontSize: "1rem",
     fontWeight: "700",
     textAlign: "center",
-    transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-    fontFamily: "poppins",
   },
   input: {
     padding: "15px",
@@ -291,8 +325,6 @@ const styles = {
     fontSize: "1rem",
     outline: "none",
     backgroundColor: "#f8fafc",
-    transition: "border-color 0.3s",
-    fontFamily: "poppins",
   },
   select: {
     padding: "15px",
@@ -302,8 +334,6 @@ const styles = {
     fontSize: "1rem",
     outline: "none",
     cursor: "pointer",
-    appearance: "none",
-    // Removes default arrow for custom look if desired
   },
   btn: {
     marginTop: "10px",
@@ -314,8 +344,15 @@ const styles = {
     fontWeight: "600",
     fontSize: "1.1rem",
     cursor: "pointer",
-    boxShadow: "0 12px 24px -6px rgba(177, 18, 38, 0.3)",
-    transition: "all 0.3s ease",
-    fontFamily: "poppins",
+  },
+  errorText: {
+    color: "rgb(177, 18, 38)",
+    fontSize: "0.85rem",
+    textAlign: "center",
+    fontWeight: "500",
+    backgroundColor: "#fff5f5",
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ffdada",
   },
 };

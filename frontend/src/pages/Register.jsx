@@ -10,21 +10,58 @@ export default function Register() {
     password: "",
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // Handle changes and block numbers in the Name field
+  const handleChange = (e) => {
+    setError("");
+    const { name, value } = e.target;
+
+    if (name === "name") {
+      // Remove any numeric characters immediately while typing
+      const alphaValue = value.replace(/[0-9]/g, "");
+      setForm({ ...form, name: alphaValue });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
+    // --- VALIDATION LOGIC ---
+
+    // 1. Name validation (Alpha only + length)
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (!nameRegex.test(form.name) || form.name.trim().length < 3) {
+      setError("Please enter a valid Full Name (Letters only, min 3 chars).");
+      return;
+    }
+
+    // 2. Phone validation (Nepali format: starts with 9, 10 digits)
+    const phoneRegex = /^9\d{9}$/;
+    if (!phoneRegex.test(form.phone)) {
+      setError("Please enter a valid 10-digit phone number starting with 9.");
+      return;
+    }
+
+    // 3. Password validation
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+    // -------------------------
+
     setLoading(true);
     try {
       const res = await API.post("/auth/register", form);
       localStorage.setItem("token", res.data.token);
       alert("Registration Successful! Welcome to the community.");
-      navigate("/"); // Redirect to home after success
+      navigate("/");
     } catch (err) {
-      alert(
+      setError(
         err.response?.data?.message ||
           "Something went wrong. Please try again.",
       );
@@ -51,6 +88,7 @@ export default function Register() {
               name="name"
               placeholder="John Doe"
               style={styles.input}
+              value={form.name}
               onChange={handleChange}
               required
             />
@@ -63,6 +101,7 @@ export default function Register() {
               type="email"
               placeholder="name@example.com"
               style={styles.input}
+              value={form.email}
               onChange={handleChange}
               required
             />
@@ -74,6 +113,7 @@ export default function Register() {
               name="phone"
               placeholder="98********"
               style={styles.input}
+              value={form.phone}
               onChange={handleChange}
               required
             />
@@ -86,10 +126,14 @@ export default function Register() {
               type="password"
               placeholder="••••••••"
               style={styles.input}
+              value={form.password}
               onChange={handleChange}
               required
             />
           </div>
+
+          {/* --- ERROR MESSAGE DISPLAY --- */}
+          {error && <span style={styles.errorText}>{error}</span>}
 
           <button
             type="submit"
@@ -116,7 +160,7 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    minHeight: "calc(100vh - 80px)", // Centering while accounting for navbar height
+    minHeight: "calc(100vh - 80px)",
     backgroundColor: "#f8f9fa",
     padding: "20px",
   },
@@ -187,5 +231,15 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
     textDecoration: "underline",
+  },
+  errorText: {
+    color: "#d32f2f",
+    fontSize: "0.85rem",
+    textAlign: "center",
+    fontWeight: "500",
+    backgroundColor: "#fff5f5",
+    padding: "8px",
+    borderRadius: "6px",
+    border: "1px solid #ffdada",
   },
 };

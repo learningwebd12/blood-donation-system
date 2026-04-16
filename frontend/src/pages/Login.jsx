@@ -6,25 +6,41 @@ export default function Login() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(""); // State to store error messages
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError(""); // Clear previous errors
+
+    // --- VALIDATION LOGIC ---
+    const phoneRegex = /^9\d{9}$/;
+
+    if (!phoneRegex.test(phone)) {
+      setError("Please enter a valid 10-digit phone number starting with 9.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+    // -------------------------
+
     setLoading(true);
 
     try {
       const res = await API.post("/auth/login", { phone, password });
 
-      // Save token
       localStorage.setItem("token", res.data.token);
-
-      // 🔥 ADD THIS LINE
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
       alert("Welcome back!");
       navigate("/");
     } catch (err) {
-      alert(err.response?.data?.message || "Invalid credentials");
+      setError(
+        err.response?.data?.message || "Invalid credentials. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -48,6 +64,7 @@ export default function Login() {
               type="text"
               placeholder="98********"
               style={styles.input}
+              value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
             />
@@ -62,10 +79,14 @@ export default function Login() {
               type="password"
               placeholder="••••••••"
               style={styles.input}
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
+
+          {/* --- ERROR MESSAGE SPAN --- */}
+          {error && <span style={styles.errorText}>{error}</span>}
 
           <button
             type="submit"
@@ -88,6 +109,7 @@ export default function Login() {
 }
 
 const styles = {
+  // ... your existing styles ...
   wrapper: {
     display: "flex",
     justifyContent: "center",
@@ -191,5 +213,16 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
     textDecoration: "none",
+  },
+  // --- ADDED THIS STYLE ---
+  errorText: {
+    color: "#d32f2f",
+    fontSize: "0.85rem",
+    textAlign: "center",
+    fontWeight: "500",
+    backgroundColor: "#fff5f5",
+    padding: "8px",
+    borderRadius: "6px",
+    border: "1px solid #ffdada",
   },
 };
