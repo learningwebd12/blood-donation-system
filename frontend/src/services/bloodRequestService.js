@@ -1,6 +1,6 @@
-import API from "../api/api"; // your axios instance
+import API from "../api/api";
 
-// Fetch all requests (optionally filtered by lat, lon, province)
+// Fetch all requests
 export const getAllRequests = (lat, lon, province) => {
   const params = {};
   if (lat) params.lat = lat;
@@ -20,11 +20,22 @@ export const acceptRequest = (requestId) => {
   return API.patch(`/blood-request/accept/${requestId}`);
 };
 
-// Donor completes a request
-export const completeRequest = (requestId) => {
-  return API.patch(`/blood-request/complete/${requestId}`);
+// Donor marks donated
+export const markAsDonated = (requestId) => {
+  return API.patch(`/blood-request/mark-donated/${requestId}`);
 };
 
+// Requester confirms blood received
+export const confirmBloodReceived = (requestId) => {
+  return API.patch(`/blood-request/confirm-received/${requestId}`);
+};
+
+// Donor completed history
 export const getMyAcceptedRequests = () => {
   return API.get("/blood-request/my-accepted");
+};
+
+// Requester own requests
+export const getMyRequests = () => {
+  return API.get("/blood-request/my-requests");
 };

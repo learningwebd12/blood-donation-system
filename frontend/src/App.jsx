@@ -1,14 +1,16 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-const isAdminRoute = location.pathname.startsWith("/admin");
+
+// Admin Pages
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import AdminRequests from "./pages/AdminRequests";
 import AdminContactMessages from "./pages/AdminContactMessages";
 import AdminLogin from "./pages/AdminLogin";
 
-// Pages
+// Main Pages
 import Home from "./pages/Home";
 import About from "./components/About";
 import Contact from "./components/Contact";
@@ -17,14 +19,18 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import CompleteProfile from "./pages/CompleteProfile";
 import CreateBloodRequest from "./pages/CreateBloodRequest";
-import ViewRequests from "./pages/ViewRequests";
+import DonorRequestsPage from "./pages/DonorRequestsPage";
+import ReceiverRequestsPage from "./pages/ReceiverRequestsPage";
 import MyAcceptRequest from "./pages/MyAcceptedRequests";
 
 import "./index.css";
 
-export default function App() {
+function AppLayout() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
   return (
-    <BrowserRouter>
+    <>
       {!isAdminRoute && <Navbar />}
 
       <Routes>
@@ -39,10 +45,14 @@ export default function App() {
         <Route path="/my-accepted" element={<MyAcceptRequest />} />
 
         <Route path="/create-blood-request" element={<CreateBloodRequest />} />
-        <Route path="/view-requests" element={<ViewRequests />} />
 
+        {/* New split pages */}
+        <Route path="/donor-requests" element={<DonorRequestsPage />} />
+
+        <Route path="/my-requests" element={<ReceiverRequestsPage />} />
+
+        {/* Admin */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
-
         <Route path="/admin-users" element={<AdminUsers />} />
         <Route path="/admin-requests" element={<AdminRequests />} />
         <Route
@@ -53,6 +63,14 @@ export default function App() {
       </Routes>
 
       {!isAdminRoute && <Footer />}
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppLayout />
     </BrowserRouter>
   );
 }

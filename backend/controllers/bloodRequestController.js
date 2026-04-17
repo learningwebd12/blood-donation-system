@@ -1,5 +1,7 @@
 const BloodRequest = require("../models/BloodRequest");
 const User = require("../models/User");
+
+// Create request
 exports.createRequest = async (req, res) => {
   try {
     const {
@@ -22,8 +24,8 @@ exports.createRequest = async (req, res) => {
       !province ||
       !district ||
       !contactPhone ||
-      !location?.lat ||
-      !location?.lon
+      location?.lat === undefined ||
+      location?.lon === undefined
     ) {
       return res.status(400).json({
         success: false,
@@ -57,6 +59,8 @@ exports.createRequest = async (req, res) => {
     });
   }
 };
+
+// Get all active requests
 exports.getAllRequests = async (req, res) => {
   try {
     const { province } = req.query;
@@ -64,11 +68,11 @@ exports.getAllRequests = async (req, res) => {
 
     const baseQuery = {
       $or: [
-        { status: "pending" }, // सबै पेन्डिङ रिक्वेस्टहरू
-        { status: "accepted" }, // स्विकार गरिएका तर पुरा नभएका रिक्वेस्टहरू
-        { requester: userId }, // यदि यो मेरै रिक्वेस्ट हो भने जुनसुकै अवस्थामा पनि देखाउने
+        { status: "pending" },
+        { status: "accepted" },
+        { status: "waiting_confirmation" },
+        { requester: userId },
       ],
-      // completed भएकालाई फिल्टर आउट गर्न (ताकि लिस्ट फोहोर नहोस्)
       status: { $ne: "completed" },
     };
 
@@ -78,6 +82,7 @@ exports.getAllRequests = async (req, res) => {
 
     const requests = await BloodRequest.find(baseQuery)
       .populate("requester", "name phone district province")
+      .populate("acceptedBy", "name phone")
       .sort({ createdAt: -1 });
 
     res.json({
@@ -92,6 +97,7 @@ exports.getAllRequests = async (req, res) => {
   }
 };
 
+// Donor accepts request
 exports.acceptRequest = async (req, res) => {
   try {
     const requestId = req.params.id;
@@ -100,39 +106,51 @@ exports.acceptRequest = async (req, res) => {
     const request = await BloodRequest.findById(requestId);
 
     if (!request) {
-      return res.status(404).json({ message: "Request not found" });
+      return res.status(404).json({ success: false, message: "Request not found" });
+    }
+
+    if (request.requester.toString() === userId) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot accept your own request",
+      });
     }
 
     if (request.status !== "pending") {
       return res.status(400).json({
-        message: "Request already accepted or completed",
+        success: false,
+        message: "Request already accepted or processed",
       });
     }
 
-    // donor already has an active accepted request?
-    const existingAcceptedRequest = await BloodRequest.findOne({
+    const existingActiveRequest = await BloodRequest.findOne({
       acceptedBy: userId,
-      status: "accepted",
+      status: { $in: ["accepted", "waiting_confirmation"] },
     });
 
-    if (existingAcceptedRequest) {
+    if (existingActiveRequest) {
       return res.status(400).json({
-        message: "You have already accepted one request. Complete it first.",
+        success: false,
+        message:
+          "You already have one active donation request. Finish it first.",
       });
     }
 
     request.status = "accepted";
     request.acceptedBy = userId;
-
     await request.save();
+
+    const updatedRequest = await BloodRequest.findById(request._id)
+      .populate("requester", "name phone district province")
+      .populate("acceptedBy", "name phone");
 
     res.json({
       success: true,
       message: "Request accepted successfully",
-      request,
+      request: updatedRequest,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Accept request error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
@@ -140,7 +158,8 @@ exports.acceptRequest = async (req, res) => {
   }
 };
 
-exports.completeRequest = async (req, res) => {
+// Donor marks donated
+exports.markAsDonated = async (req, res) => {
   try {
     const requestId = req.params.id;
     const userId = req.user.id;
@@ -148,43 +167,40 @@ exports.completeRequest = async (req, res) => {
     const request = await BloodRequest.findById(requestId);
 
     if (!request) {
-      return res.status(404).json({ message: "Request not found" });
-    }
-
-    if (
-      request.status !== "accepted" ||
-      request.acceptedBy.toString() !== userId
-    ) {
-      return res.status(400).json({
-        message: "You can only complete requests you accepted",
+      return res.status(404).json({
+        success: false,
+        message: "Request not found",
       });
     }
 
-    request.status = "completed";
+    if (!request.acceptedBy || request.acceptedBy.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the donor who accepted this request can mark as donated",
+      });
+    }
+
+    if (request.status !== "accepted") {
+      return res.status(400).json({
+        success: false,
+        message: "Only accepted requests can be marked as donated",
+      });
+    }
+
+    request.status = "waiting_confirmation";
     await request.save();
 
-    const donor = await User.findById(userId);
-
-    if (donor) {
-      donor.lastDonationDate = new Date();
-      donor.totalDonations = (donor.totalDonations || 0) + 1;
-      await donor.save();
-    }
+    const updatedRequest = await BloodRequest.findById(request._id)
+      .populate("requester", "name phone district province")
+      .populate("acceptedBy", "name phone");
 
     res.json({
       success: true,
-      message: "Request completed successfully",
-      request,
-      donor: donor
-        ? {
-            lastDonationDate: donor.lastDonationDate,
-            totalDonations: donor.totalDonations,
-            canDonate: donor.canDonate,
-          }
-        : null,
+      message: "Marked as donated. Waiting for requester confirmation.",
+      request: updatedRequest,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Mark donated error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
@@ -192,6 +208,66 @@ exports.completeRequest = async (req, res) => {
   }
 };
 
+// Requester confirms blood received
+exports.confirmBloodReceived = async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+
+    const request = await BloodRequest.findById(requestId);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Request not found",
+      });
+    }
+
+    if (request.requester.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Only requester can confirm blood received",
+      });
+    }
+
+    if (request.status !== "waiting_confirmation") {
+      return res.status(400).json({
+        success: false,
+        message: "This request is not waiting for confirmation",
+      });
+    }
+
+    request.status = "completed";
+    await request.save();
+
+    if (request.acceptedBy) {
+      const donor = await User.findById(request.acceptedBy);
+      if (donor) {
+        donor.lastDonationDate = new Date();
+        donor.totalDonations = (donor.totalDonations || 0) + 1;
+        await donor.save();
+      }
+    }
+
+    const updatedRequest = await BloodRequest.findById(request._id)
+      .populate("requester", "name phone district province")
+      .populate("acceptedBy", "name phone");
+
+    res.json({
+      success: true,
+      message: "Blood received confirmed. Request completed successfully.",
+      request: updatedRequest,
+    });
+  } catch (error) {
+    console.error("Confirm blood received error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+// Donor completed history
 exports.getMyAcceptedRequests = async (req, res) => {
   try {
     const requests = await BloodRequest.find({
@@ -209,6 +285,28 @@ exports.getMyAcceptedRequests = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+// Requester own requests
+exports.getMyRequests = async (req, res) => {
+  try {
+    const requests = await BloodRequest.find({
+      requester: req.user.id,
+    })
+      .populate("acceptedBy", "name phone")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      requests,
+    });
+  } catch (error) {
+    console.error("Get my requests error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
     });
   }
 };

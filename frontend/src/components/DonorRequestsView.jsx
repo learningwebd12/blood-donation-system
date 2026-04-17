@@ -1,13 +1,15 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   getAllRequests,
   acceptRequest,
-  completeRequest,
+  markAsDonated,
 } from "../services/bloodRequestService";
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
+    return null;
+  }
 
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -23,7 +25,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-export default function ViewRequests() {
+export default function DonorRequestsView() {
   const [requests, setRequests] = useState([]);
   const [myLocation, setMyLocation] = useState({ lat: null, lon: null });
   const [loading, setLoading] = useState(true);
@@ -32,14 +34,27 @@ export default function ViewRequests() {
   const brandColor = "rgb(177, 18, 38)";
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const userProvince = currentUser.location?.province || "Bagmati";
-  const userDistrict = currentUser.location?.district || "";
+  const userProvince = currentUser?.location?.province || "Bagmati";
+  const userDistrict = currentUser?.location?.district || "";
 
   useEffect(() => {
     const fetchRequests = async () => {
       try {
         const res = await getAllRequests(undefined, undefined, userProvince);
-        setRequests(res.data.requests || []);
+
+        const donorVisibleRequests = (res.data.requests || []).filter((r) => {
+          const isMine =
+            r.acceptedBy === currentUser._id ||
+            r.acceptedBy?._id === currentUser._id;
+
+          return (
+            r.status === "pending" ||
+            (r.status === "accepted" && isMine) ||
+            (r.status === "waiting_confirmation" && isMine)
+          );
+        });
+
+        setRequests(donorVisibleRequests);
       } catch (error) {
         console.error("Fetch failed", error);
       } finally {
@@ -61,7 +76,7 @@ export default function ViewRequests() {
     } else {
       fetchRequests();
     }
-  }, [userProvince]);
+  }, [userProvince, currentUser?._id]);
 
   const sortedRequests = useMemo(() => {
     const normalize = (v) => (v || "").toString().trim().toLowerCase();
@@ -93,10 +108,7 @@ export default function ViewRequests() {
           typeof b.distanceValue === "number" ? b.distanceValue : Infinity;
 
         if (da !== db) return da - db;
-
-        const ua = urgencyMap[a.urgency] || 0;
-        const ub = urgencyMap[b.urgency] || 0;
-        return ub - ua;
+        return (urgencyMap[b.urgency] || 0) - (urgencyMap[a.urgency] || 0);
       });
     }
 
@@ -123,25 +135,21 @@ export default function ViewRequests() {
       const aSameProvince = normalize(a.province) === normalize(userProvince);
       const bSameProvince = normalize(b.province) === normalize(userProvince);
 
-      const getLocationScore = (sameDistrict, sameProvince) => {
+      const getScore = (sameDistrict, sameProvince) => {
         if (sameDistrict) return 2;
         if (sameProvince) return 1;
         return 0;
       };
 
-      const aLocationScore = getLocationScore(aSameDistrict, aSameProvince);
-      const bLocationScore = getLocationScore(bSameDistrict, bSameProvince);
+      const aScore = getScore(aSameDistrict, aSameProvince);
+      const bScore = getScore(bSameDistrict, bSameProvince);
 
-      if (bLocationScore !== aLocationScore) {
-        return bLocationScore - aLocationScore;
-      }
+      if (bScore !== aScore) return bScore - aScore;
 
       const ua = urgencyMap[a.urgency] || 0;
       const ub = urgencyMap[b.urgency] || 0;
 
-      if (ub !== ua) {
-        return ub - ua;
-      }
+      if (ub !== ua) return ub - ua;
 
       const da =
         typeof a.distanceValue === "number" ? a.distanceValue : Infinity;
@@ -162,6 +170,7 @@ export default function ViewRequests() {
   const handleAccept = async (id) => {
     try {
       await acceptRequest(id);
+
       setRequests((prev) =>
         prev.map((r) =>
           r._id === id
@@ -169,31 +178,42 @@ export default function ViewRequests() {
             : r,
         ),
       );
+
       alert("Request Accepted ✅");
     } catch (err) {
       alert(err.response?.data?.message || "Failed to accept");
     }
   };
 
-  const handleComplete = async (id) => {
+  const handleMarkDonated = async (id) => {
     try {
-      await completeRequest(id);
-      setRequests((prev) => prev.filter((r) => r._id !== id));
-      alert("Request Completed 🎯");
+      await markAsDonated(id);
+
+      setRequests((prev) =>
+        prev.map((r) =>
+          r._id === id ? { ...r, status: "waiting_confirmation" } : r,
+        ),
+      );
+
+      alert("Marked as donated. Waiting for requester confirmation ✅");
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to complete");
+      alert(err.response?.data?.message || "Failed to mark as donated");
     }
   };
+
+  if (loading) {
+    return <h2 style={{ textAlign: "center", padding: "30px" }}>Loading...</h2>;
+  }
 
   return (
     <div style={styles.page}>
       <motion.div
-        initial={{ opacity: 0, y: -25 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         style={styles.header}
       >
         <h1 style={{ ...styles.title, color: brandColor }}>
-          🩸 Urgent Requests
+          🩸 Donor Requests
         </h1>
 
         <div style={styles.filterContainer}>
@@ -221,10 +241,8 @@ export default function ViewRequests() {
         </p>
       </motion.div>
 
-      {loading ? (
-        <div style={styles.loadingBox}>Analyzing blood requests...</div>
-      ) : sortedRequests.length === 0 ? (
-        <div style={styles.emptyBox}>No active requests in {userProvince}.</div>
+      {sortedRequests.length === 0 ? (
+        <div style={styles.emptyBox}>No requests found.</div>
       ) : (
         <div style={styles.grid}>
           <AnimatePresence mode="popLayout">
@@ -334,7 +352,7 @@ export default function ViewRequests() {
                   )}
 
                   <div style={styles.actions}>
-                    {currentUser.userType?.includes("donor") &&
+                    {currentUser?.userType?.includes("donor") &&
                       r.status === "pending" && (
                         <button
                           style={{
@@ -360,6 +378,7 @@ export default function ViewRequests() {
                         >
                           📞 Call
                         </a>
+
                         <a
                           href={`https://wa.me/${r.contactPhone}`}
                           target="_blank"
@@ -370,11 +389,12 @@ export default function ViewRequests() {
                             flex: 1,
                           }}
                         >
-                          💬 Chat
+                          💬 WhatsApp
                         </a>
-                        {r.location?.lat && (
+
+                        {r.location?.lat && r.location?.lon && (
                           <a
-                            href={`https://www.google.com/maps?q=${r.location.lat},${r.location.lon}`}
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${r.location.lat},${r.location.lon}`}
                             target="_blank"
                             rel="noreferrer"
                             style={{
@@ -386,16 +406,23 @@ export default function ViewRequests() {
                             📍 View on Map
                           </a>
                         )}
+
                         <button
                           style={{
                             ...styles.btn,
                             background: "#1e293b",
                             width: "100%",
                           }}
-                          onClick={() => handleComplete(r._id)}
+                          onClick={() => handleMarkDonated(r._id)}
                         >
-                          Mark as Completed
+                          Mark as Donated
                         </button>
+                      </div>
+                    )}
+
+                    {r.status === "waiting_confirmation" && isAcceptedByMe && (
+                      <div style={styles.waitBox}>
+                        Waiting for requester confirmation ⏳
                       </div>
                     )}
                   </div>
@@ -608,11 +635,15 @@ const styles = {
     flexWrap: "wrap",
     gap: "10px",
   },
-  loadingBox: {
+  waitBox: {
+    marginTop: "10px",
+    background: "#fff7ed",
+    color: "#c2410c",
+    padding: "12px",
+    borderRadius: "12px",
+    fontWeight: "700",
     textAlign: "center",
-    padding: "100px",
-    color: "#64748b",
-    fontSize: "1.2rem",
+    border: "1px solid #fdba74",
   },
   emptyBox: {
     textAlign: "center",

@@ -12,7 +12,6 @@ export default function Navbar() {
 
   const brandColor = "rgb(177, 18, 38)";
 
-  // Track scroll position for dynamic styling
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
@@ -24,7 +23,6 @@ export default function Navbar() {
     navigate("/login");
   };
 
-  // Helper to determine active link
   const isActive = (path) => location.pathname === path;
 
   const getLinkStyle = (id, path) => ({
@@ -50,7 +48,6 @@ export default function Navbar() {
         boxShadow: scrolled ? "0 10px 30px rgba(0,0,0,0.08)" : "none",
       }}
     >
-      {/* Logo */}
       <Link to="/" style={styles.logoContainer}>
         <motion.span
           animate={{ scale: [1, 1.2, 1] }}
@@ -64,7 +61,6 @@ export default function Navbar() {
         </h2>
       </Link>
 
-      {/* Menu - ALL original logic preserved */}
       <ul style={styles.menu}>
         {["Home", "About", "Contact"].map((item) => {
           const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
@@ -82,8 +78,7 @@ export default function Navbar() {
           );
         })}
 
-        {/* Additional links for logged-in users (Receiver Logic) */}
-        {user && user.userType.includes("receiver") && (
+        {user?.userType?.includes("receiver") && (
           <>
             <li>
               <Link
@@ -98,32 +93,33 @@ export default function Navbar() {
                 Create Blood Request
               </Link>
             </li>
+
             <li>
               <Link
-                to="/view-requests"
-                style={getLinkStyle("ViewRequests", "/view-requests")}
-                onMouseEnter={() => setIsHovered("ViewRequests")}
+                to="/my-requests"
+                style={getLinkStyle("MyRequests", "/my-requests")}
+                onMouseEnter={() => setIsHovered("MyRequests")}
                 onMouseLeave={() => setIsHovered(null)}
               >
-                View Your Requests
+                My Requests
               </Link>
             </li>
           </>
         )}
 
-        {/* Additional links for logged-in users (Donor Logic) */}
-        {user && user.userType.includes("donor") && (
+        {user?.userType?.includes("donor") && (
           <>
             <li>
               <Link
-                to="/view-requests"
-                style={getLinkStyle("ViewRequestsDonor", "/view-requests")}
-                onMouseEnter={() => setIsHovered("ViewRequestsDonor")}
+                to="/donor-requests"
+                style={getLinkStyle("DonorRequests", "/donor-requests")}
+                onMouseEnter={() => setIsHovered("DonorRequests")}
                 onMouseLeave={() => setIsHovered(null)}
               >
-                View Requests
+                Donor Requests
               </Link>
             </li>
+
             <li>
               <Link
                 to="/my-accepted"
@@ -138,7 +134,6 @@ export default function Navbar() {
         )}
       </ul>
 
-      {/* Auth Buttons */}
       <div style={styles.authButtons}>
         {!user ? (
           <>
@@ -151,6 +146,7 @@ export default function Navbar() {
             >
               Login
             </Link>
+
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
                 to="/register"
@@ -176,6 +172,7 @@ export default function Navbar() {
             >
               Profile
             </Link>
+
             <button
               onClick={handleLogout}
               style={{
@@ -236,8 +233,16 @@ const styles = {
     paddingBottom: "4px",
     transition: "all 0.3s ease",
   },
-  authButtons: { display: "flex", alignItems: "center", gap: "20px" },
-  userSection: { display: "flex", alignItems: "center", gap: "12px" },
+  authButtons: {
+    display: "flex",
+    alignItems: "center",
+    gap: "20px",
+  },
+  userSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
   loginBtn: {
     textDecoration: "none",
     fontWeight: "600",
