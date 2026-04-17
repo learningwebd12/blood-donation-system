@@ -57,14 +57,19 @@ exports.createRequest = async (req, res) => {
     });
   }
 };
-
 exports.getAllRequests = async (req, res) => {
   try {
     const { province } = req.query;
     const userId = req.user.id;
 
     const baseQuery = {
-      $or: [{ status: "pending" }, { status: "accepted", acceptedBy: userId }],
+      $or: [
+        { status: "pending" }, // सबै पेन्डिङ रिक्वेस्टहरू
+        { status: "accepted" }, // स्विकार गरिएका तर पुरा नभएका रिक्वेस्टहरू
+        { requester: userId }, // यदि यो मेरै रिक्वेस्ट हो भने जुनसुकै अवस्थामा पनि देखाउने
+      ],
+      // completed भएकालाई फिल्टर आउट गर्न (ताकि लिस्ट फोहोर नहोस्)
+      status: { $ne: "completed" },
     };
 
     if (province) {
@@ -99,9 +104,21 @@ exports.acceptRequest = async (req, res) => {
     }
 
     if (request.status !== "pending") {
-      return res
-        .status(400)
-        .json({ message: "Request already accepted or completed" });
+      return res.status(400).json({
+        message: "Request already accepted or completed",
+      });
+    }
+
+    // donor already has an active accepted request?
+    const existingAcceptedRequest = await BloodRequest.findOne({
+      acceptedBy: userId,
+      status: "accepted",
+    });
+
+    if (existingAcceptedRequest) {
+      return res.status(400).json({
+        message: "You have already accepted one request. Complete it first.",
+      });
     }
 
     request.status = "accepted";

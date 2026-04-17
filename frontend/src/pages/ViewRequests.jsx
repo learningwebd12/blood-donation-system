@@ -6,7 +6,6 @@ import {
   completeRequest,
 } from "../services/bloodRequestService";
 
-// Haversine Formula for Distance Calculation
 function calculateDistance(lat1, lon1, lat2, lon2) {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null;
 
@@ -88,9 +87,16 @@ export default function ViewRequests() {
 
     if (activeFilter === "nearest") {
       return copy.sort((a, b) => {
-        const da = a.distanceValue ?? Infinity;
-        const db = b.distanceValue ?? Infinity;
-        return da - db;
+        const da =
+          typeof a.distanceValue === "number" ? a.distanceValue : Infinity;
+        const db =
+          typeof b.distanceValue === "number" ? b.distanceValue : Infinity;
+
+        if (da !== db) return da - db;
+
+        const ua = urgencyMap[a.urgency] || 0;
+        const ub = urgencyMap[b.urgency] || 0;
+        return ub - ua;
       });
     }
 
@@ -101,11 +107,15 @@ export default function ViewRequests() {
 
         if (ub !== ua) return ub - ua;
 
-        return new Date(b.createdAt) - new Date(a.createdAt);
+        const da =
+          typeof a.distanceValue === "number" ? a.distanceValue : Infinity;
+        const db =
+          typeof b.distanceValue === "number" ? b.distanceValue : Infinity;
+
+        return da - db;
       });
     }
 
-    // Priority = same district first, then same province, then urgency, then latest
     return copy.sort((a, b) => {
       const aSameDistrict = normalize(a.district) === normalize(userDistrict);
       const bSameDistrict = normalize(b.district) === normalize(userDistrict);
@@ -133,7 +143,12 @@ export default function ViewRequests() {
         return ub - ua;
       }
 
-      return new Date(b.createdAt) - new Date(a.createdAt);
+      const da =
+        typeof a.distanceValue === "number" ? a.distanceValue : Infinity;
+      const db =
+        typeof b.distanceValue === "number" ? b.distanceValue : Infinity;
+
+      return da - db;
     });
   }, [
     requests,
@@ -191,12 +206,19 @@ export default function ViewRequests() {
                 ...(activeFilter === f ? styles.activeFilter : {}),
               }}
             >
-              {f === "priority"
-                ? "Priority"
-                : f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === "priority" && "Priority"}
+              {f === "nearest" && "Nearest"}
+              {f === "urgent" && "Urgent"}
             </button>
           ))}
         </div>
+
+        <p style={styles.filterText}>
+          {activeFilter === "priority" &&
+            "Showing same district first, then province, then urgency"}
+          {activeFilter === "nearest" && "Showing nearest requests first"}
+          {activeFilter === "urgent" && "Showing most urgent requests first"}
+        </p>
       </motion.div>
 
       {loading ? (
@@ -280,6 +302,18 @@ export default function ViewRequests() {
                     <p style={styles.postedBy}>
                       Patient: <b>{r.patientName}</b>
                     </p>
+
+                    {activeFilter === "nearest" && r.distanceValue !== null && (
+                      <p style={styles.modeInfoNearest}>
+                        Nearest: {r.distanceValue.toFixed(1)} km
+                      </p>
+                    )}
+
+                    {activeFilter === "urgent" && (
+                      <p style={styles.modeInfoUrgent}>
+                        Urgency: {r.urgency?.toUpperCase()}
+                      </p>
+                    )}
                   </div>
 
                   <div style={styles.statsRow}>
@@ -326,7 +360,6 @@ export default function ViewRequests() {
                         >
                           📞 Call
                         </a>
-
                         <a
                           href={`https://wa.me/${r.contactPhone}`}
                           target="_blank"
@@ -339,7 +372,6 @@ export default function ViewRequests() {
                         >
                           💬 Chat
                         </a>
-
                         {r.location?.lat && (
                           <a
                             href={`https://www.google.com/maps?q=${r.location.lat},${r.location.lon}`}
@@ -354,7 +386,6 @@ export default function ViewRequests() {
                             📍 View on Map
                           </a>
                         )}
-
                         <button
                           style={{
                             ...styles.btn,
@@ -419,6 +450,12 @@ const styles = {
     background: "#fff",
     color: "rgb(177, 18, 38)",
     boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+  },
+  filterText: {
+    marginTop: "12px",
+    color: "#64748b",
+    fontWeight: "600",
+    fontSize: "0.95rem",
   },
   grid: {
     display: "grid",
@@ -502,6 +539,18 @@ const styles = {
     fontSize: "0.85rem",
     color: "#94a3b8",
     margin: 0,
+  },
+  modeInfoNearest: {
+    fontSize: "0.8rem",
+    fontWeight: "700",
+    color: "#2563eb",
+    margin: "4px 0 0",
+  },
+  modeInfoUrgent: {
+    fontSize: "0.8rem",
+    fontWeight: "700",
+    color: "#dc2626",
+    margin: "4px 0 0",
   },
   statsRow: {
     display: "grid",
