@@ -4,6 +4,19 @@ const User = require("../models/User");
 // Create request
 exports.createRequest = async (req, res) => {
   try {
+    const user = await User.findById(req.user.id);
+
+    if (
+      user.userType?.includes("donor") &&
+      !user.userType?.includes("receiver")
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Access Denied: Donors are not allowed to create blood requests.",
+      });
+    }
+    
     const {
       patientName,
       bloodType,
@@ -98,17 +111,43 @@ exports.getAllRequests = async (req, res) => {
 };
 
 // Donor accepts request
+// Donor accepts request
 exports.acceptRequest = async (req, res) => {
   try {
     const requestId = req.params.id;
     const userId = req.user.id;
 
+    // 1. Check if Donor is eligible (90 Days Lock Logic)
+    const donor = await User.findById(userId);
+
+    if (donor?.lastDonationDate) {
+      const lastDonation = new Date(donor.lastDonationDate);
+      const nextDate = new Date(lastDonation);
+      nextDate.setDate(nextDate.getDate() + 90); // 90 days gap
+
+      const today = new Date();
+
+      if (today < nextDate) {
+        const diffMs = nextDate - today;
+        const remainingDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        return res.status(400).json({
+          success: false,
+          message: `You donated recently. You can accept the next blood request after ${remainingDays} day(s).`,
+        });
+      }
+    }
+
+    // 2. Find the request
     const request = await BloodRequest.findById(requestId);
 
     if (!request) {
-      return res.status(404).json({ success: false, message: "Request not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found" });
     }
 
+    // 3. Prevent self-acceptance
     if (request.requester.toString() === userId) {
       return res.status(400).json({
         success: false,
@@ -116,6 +155,7 @@ exports.acceptRequest = async (req, res) => {
       });
     }
 
+    // 4. Check status
     if (request.status !== "pending") {
       return res.status(400).json({
         success: false,
@@ -123,6 +163,7 @@ exports.acceptRequest = async (req, res) => {
       });
     }
 
+    // 5. Prevent multiple active donations
     const existingActiveRequest = await BloodRequest.findOne({
       acceptedBy: userId,
       status: { $in: ["accepted", "waiting_confirmation"] },
@@ -136,6 +177,7 @@ exports.acceptRequest = async (req, res) => {
       });
     }
 
+    // 6. Update Status
     request.status = "accepted";
     request.acceptedBy = userId;
     await request.save();

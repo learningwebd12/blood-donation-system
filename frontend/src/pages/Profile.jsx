@@ -4,15 +4,16 @@ import API from "../api/api";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
+  const [eligibility, setEligibility] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     API.get("/profile/me")
       .then((res) => {
-        const userData = res.data.user;
-        setUser(userData);
-        if (!userData.profileComplete) navigate("/complete-profile");
+        setUser(res.data.user);
+        setEligibility(res.data.eligibility);
+        if (!res.data.user.profileComplete) navigate("/complete-profile");
       })
       .catch(() => alert("Failed to load profile"))
       .finally(() => setLoading(false));
@@ -34,79 +35,123 @@ export default function Profile() {
     );
 
   return (
-    <div style={styles.wrapper}>
-      <div style={styles.card}>
-        {/* Banner Section */}
-        <div style={styles.banner}>
-          <div style={styles.avatarCircle}>
-            {user.bloodType ? (
-              <span style={styles.bloodSymbol}>{user.bloodType}</span>
-            ) : (
-              "👤"
-            )}
+    <div style={styles.pageContainer}>
+      {/* Banner / Header Section - Spans Full Width */}
+      <div style={styles.fullBanner}>
+        <div style={styles.avatarCircle}>
+          {user.bloodType ? (
+            <span style={styles.bloodSymbol}>{user.bloodType}</span>
+          ) : (
+            "👤"
+          )}
+        </div>
+      </div>
+
+      <div style={styles.mainContent}>
+        <div style={styles.header}>
+          <h2 style={styles.name}>{user.name}</h2>
+          <div style={styles.badge}>
+            {user.userType?.includes("donor") ? "⭐ Active Donor" : "Receiver"}
+          </div>
+          <p style={styles.locationText}>
+            📍 {user.location?.district}, {user.location?.province}
+          </p>
+        </div>
+
+        {/* Info Grid - Adjusted for Full Width Scannability */}
+        <div style={styles.statsGrid}>
+          <div style={styles.infoBox}>
+            <span style={styles.label}>AGE</span>
+            <span style={styles.value}>{user.healthInfo?.age || "--"}</span>
+          </div>
+          <div style={styles.infoBox}>
+            <span style={styles.label}>WEIGHT</span>
+            <span style={styles.value}>
+              {user.healthInfo?.weight || "--"} <small>kg</small>
+            </span>
+          </div>
+          <div style={styles.infoBox}>
+            <span style={styles.label}>GENDER</span>
+            <span style={styles.value}>{user.healthInfo?.gender || "--"}</span>
           </div>
         </div>
 
-        <div style={styles.content}>
-          <div style={styles.header}>
-            <h2 style={styles.name}>{user.name}</h2>
-            <div style={styles.badge}>
-              {user.userType?.includes("donor")
-                ? "⭐ Active Donor"
-                : "Receiver"}
-            </div>
-            <p style={styles.locationText}>
-              📍 {user.location?.district}, {user.location?.province}
-            </p>
-          </div>
-
-          <div style={styles.grid}>
-            <div style={styles.infoBox}>
-              <span style={styles.label}>AGE</span>
-              <span style={styles.value}>{user.healthInfo?.age || "--"}</span>
-            </div>
-            <div style={styles.infoBox}>
-              <span style={styles.label}>WEIGHT</span>
-              <span style={styles.value}>
-                {user.healthInfo?.weight || "--"} <small>kg</small>
-              </span>
-            </div>
-            <div style={styles.infoBox}>
-              <span style={styles.label}>GENDER</span>
-              <span style={styles.value}>
-                {user.healthInfo?.gender || "--"}
-              </span>
+        <div style={styles.sectionLayout}>
+          {/* Left Column: Contact Details */}
+          <div style={styles.column}>
+            <h3 style={styles.sectionTitle}>Contact Information</h3>
+            <div style={styles.contactCard}>
+              <div style={styles.contactItem}>
+                <span style={styles.contactIcon}>📞</span>
+                <span>{user.phone}</span>
+              </div>
+              <div style={styles.contactItem}>
+                <span style={styles.contactIcon}>✉️</span>
+                <span>{user.email || "Add email"}</span>
+              </div>
             </div>
           </div>
 
-          <div style={styles.contactSection}>
-            <div style={styles.contactItem}>
-              <span style={styles.contactIcon}>📞</span>
-              <span>{user.phone}</span>
-            </div>
-            <div style={styles.contactItem}>
-              <span style={styles.contactIcon}>✉️</span>
-              <span>{user.email || "Add email"}</span>
-            </div>
-          </div>
+          {/* Right Column: Donation Eligibility (Donors only) */}
+          {user.userType?.includes("donor") && eligibility && (
+            <div style={styles.column}>
+              <h3 style={styles.sectionTitle}>Donation Status</h3>
+              <div style={styles.donationContainer}>
+                <div style={styles.donationGrid}>
+                  <div style={styles.donationBox}>
+                    <span style={styles.donationLabel}>TOTAL DONATIONS</span>
+                    <span style={styles.donationValue}>
+                      {eligibility.totalDonations || 0}
+                    </span>
+                  </div>
+                  <div style={styles.donationBox}>
+                    <span style={styles.donationLabel}>LAST DONATION</span>
+                    <span style={styles.donationValue}>
+                      {eligibility.lastDonationDate
+                        ? new Date(
+                            eligibility.lastDonationDate,
+                          ).toLocaleDateString("en-GB")
+                        : "Never"}
+                    </span>
+                  </div>
+                </div>
 
-          <div style={styles.actions}>
-            <button
-              style={styles.editBtn}
-              onClick={() => navigate("/complete-profile")}
-            >
-              Edit Details
-            </button>
-            <button
-              style={styles.logoutBtn}
-              onClick={() => {
-                localStorage.removeItem("token");
-                navigate("/login");
-              }}
-            >
-              Logout
-            </button>
-          </div>
+                <div
+                  style={{
+                    ...styles.eligibilityBanner,
+                    background: eligibility.canDonate ? "#ecfdf5" : "#fff7ed",
+                    color: eligibility.canDonate ? "#166534" : "#c2410c",
+                    border: eligibility.canDonate
+                      ? "1px solid #86efac"
+                      : "1px solid #fdba74",
+                  }}
+                >
+                  {eligibility.canDonate
+                    ? "✅ You are eligible to donate now"
+                    : `⏳ Eligible in ${eligibility.remainingDays} days`}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div style={styles.footer}>
+          <button
+            style={styles.editBtn}
+            onClick={() => navigate("/complete-profile")}
+          >
+            Edit Profile
+          </button>
+          <button
+            style={styles.logoutBtn}
+            onClick={() => {
+              localStorage.removeItem("token");
+              navigate("/login");
+            }}
+          >
+            Log Out Account
+          </button>
         </div>
       </div>
     </div>
@@ -114,140 +159,180 @@ export default function Profile() {
 }
 
 const styles = {
-  wrapper: {
-    minHeight: "90vh",
-    background: "linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "20px",
-  },
-  card: {
+  pageContainer: {
+    minHeight: "100vh",
+    background: "#f8fafc",
     width: "100%",
-    maxWidth: "400px",
-    background: "#fff",
-    borderRadius: "24px",
-    overflow: "hidden",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
   },
-  banner: {
-    height: "100px",
-    background: "linear-gradient(90deg, #d32f2f 0%, #b11226 100%)",
+  fullBanner: {
+    height: "160px",
+    background: "linear-gradient(135deg, #d32f2f 0%, #7c0a18 100%)",
     position: "relative",
     display: "flex",
     justifyContent: "center",
+    width: "100%",
   },
   avatarCircle: {
-    width: "90px",
-    height: "90px",
+    width: "120px",
+    height: "120px",
     background: "#fff",
     borderRadius: "50%",
     position: "absolute",
-    bottom: "-45px",
+    bottom: "-60px",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    border: "4px solid #fff",
-    boxShadow: "0 8px 15px rgba(0,0,0,0.1)",
+    border: "6px solid #f8fafc",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
   },
   bloodSymbol: {
-    fontSize: "1.8rem",
-    fontWeight: "bold",
+    fontSize: "2.5rem",
+    fontWeight: "800",
     color: "#d32f2f",
   },
-  content: {
-    padding: "60px 25px 30px 25px",
+  mainContent: {
+    maxWidth: "1000px", // Limits content width for readability, but page is full width
+    margin: "80px auto 0 auto",
+    padding: "0 20px 40px 20px",
     textAlign: "center",
   },
   header: {
-    marginBottom: "25px",
+    marginBottom: "40px",
   },
   name: {
-    margin: "0 0 5px 0",
-    fontSize: "1.6rem",
-    color: "#2d3436",
+    fontSize: "2.2rem",
+    margin: "0 0 10px 0",
+    color: "#1e293b",
+    fontWeight: "800",
   },
   badge: {
     display: "inline-block",
-    padding: "4px 12px",
-    background: "#fff5f5",
-    color: "#d32f2f",
-    borderRadius: "20px",
-    fontSize: "0.85rem",
-    fontWeight: "600",
-    marginBottom: "8px",
+    padding: "6px 16px",
+    background: "#fee2e2",
+    color: "#b91c1c",
+    borderRadius: "30px",
+    fontSize: "0.9rem",
+    fontWeight: "700",
+    marginBottom: "10px",
   },
   locationText: {
-    margin: 0,
-    fontSize: "0.9rem",
-    color: "#636e72",
+    color: "#64748b",
+    fontSize: "1.1rem",
   },
-  grid: {
+  statsGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
-    gap: "10px",
-    marginBottom: "30px",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "20px",
+    marginBottom: "40px",
   },
   infoBox: {
-    padding: "15px 5px",
-    background: "#f8f9fa",
-    borderRadius: "12px",
-    display: "flex",
-    flexDirection: "column",
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "20px",
+    boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
+    border: "1px solid #e2e8f0",
   },
   label: {
-    fontSize: "0.65rem",
-    color: "#95a5a6",
-    fontWeight: "bold",
-    letterSpacing: "0.5px",
-    marginBottom: "4px",
+    fontSize: "0.75rem",
+    color: "#94a3b8",
+    fontWeight: "800",
+    display: "block",
+    marginBottom: "5px",
   },
   value: {
-    fontSize: "1rem",
-    fontWeight: "700",
-    color: "#2d3436",
+    fontSize: "1.4rem",
+    fontWeight: "800",
+    color: "#0f172a",
   },
-  contactSection: {
+  sectionLayout: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+    gap: "30px",
     textAlign: "left",
-    background: "#fdfdfd",
-    border: "1px solid #f0f0f0",
-    padding: "15px",
-    borderRadius: "15px",
-    marginBottom: "25px",
+    marginBottom: "40px",
+  },
+  sectionTitle: {
+    fontSize: "1.2rem",
+    color: "#334155",
+    fontWeight: "700",
+    marginBottom: "15px",
+    paddingLeft: "5px",
+  },
+  contactCard: {
+    background: "#fff",
+    padding: "25px",
+    borderRadius: "20px",
+    border: "1px solid #e2e8f0",
   },
   contactItem: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    marginBottom: "8px",
-    fontSize: "0.95rem",
-    color: "#444",
-  },
-  contactIcon: {
+    gap: "15px",
+    marginBottom: "15px",
     fontSize: "1.1rem",
+    color: "#475569",
   },
-  actions: {
+  contactIcon: { fontSize: "1.4rem" },
+  donationContainer: {
+    background: "#fff",
+    padding: "25px",
+    borderRadius: "20px",
+    border: "1px solid #e2e8f0",
+  },
+  donationGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "15px",
+    marginBottom: "20px",
+  },
+  donationBox: {
+    background: "#f1f5f9",
+    padding: "15px",
+    borderRadius: "15px",
+    textAlign: "center",
+  },
+  donationLabel: {
+    fontSize: "0.7rem",
+    fontWeight: "700",
+    color: "#64748b",
+    display: "block",
+  },
+  donationValue: {
+    fontSize: "1.3rem",
+    fontWeight: "800",
+    color: "#b91c1c",
+  },
+  eligibilityBanner: {
+    padding: "15px",
+    borderRadius: "15px",
+    textAlign: "center",
+    fontWeight: "700",
+  },
+  footer: {
+    borderTop: "1px solid #e2e8f0",
+    paddingTop: "30px",
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    alignItems: "center",
+    gap: "15px",
   },
   editBtn: {
-    padding: "12px",
-    border: "none",
-    borderRadius: "12px",
-    background: "#d32f2f",
+    padding: "15px 40px",
+    background: "#b91c1c",
     color: "#fff",
-    fontSize: "1rem",
-    fontWeight: "bold",
+    border: "none",
+    borderRadius: "15px",
+    fontSize: "1.1rem",
+    fontWeight: "700",
     cursor: "pointer",
-    transition: "transform 0.2s",
+    width: "100%",
+    maxWidth: "300px",
   },
   logoutBtn: {
-    padding: "10px",
-    border: "none",
     background: "transparent",
-    color: "#636e72",
-    fontSize: "0.9rem",
+    border: "none",
+    color: "#94a3b8",
+    fontSize: "1rem",
     cursor: "pointer",
     textDecoration: "underline",
   },

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createRequest } from "../services/bloodRequestService";
 import { getLocationData } from "../services/profileService";
 import MapPicker from "../components/MapPicker";
+import API from "../api/api";
 
 const districtCenters = {
   Bhojpur: [27.17, 87.04],
@@ -88,7 +89,8 @@ export default function CreateBloodRequest() {
   const navigate = useNavigate();
   const [locations, setLocations] = useState({});
   const [provinces, setProvinces] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -104,20 +106,42 @@ export default function CreateBloodRequest() {
   });
 
   useEffect(() => {
-    getLocationData().then((res) => {
-      setProvinces(res.data.provinces);
-      setLocations(res.data.locations);
-    });
-  }, []);
+    const initPage = async () => {
+      try {
+        // 1. Check Role Authorization
+        const userRes = await API.get("/profile/me");
+        const userData = userRes.data.user;
+
+        if (
+          userData.userType?.includes("donor") &&
+          !userData.userType?.includes("receiver")
+        ) {
+          alert(
+            "Only Receivers can create blood requests. Please update your profile.",
+          );
+          navigate("/");
+          return;
+        }
+
+        // 2. Fetch Dropdown Data
+        const locRes = await getLocationData();
+        setProvinces(locRes.data.provinces);
+        setLocations(locRes.data.locations);
+      } catch (err) {
+        setError("Error loading component data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    initPage();
+  }, [navigate]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     setError("");
 
-    // Validation: Prevent negative values
     if (type === "number" && value < 0) return;
 
-    // Validation: Prevent numbers in names
     if (name === "patientName" || name === "hospital") {
       setForm({ ...form, [name]: value.replace(/[0-9]/g, "") });
       return;
@@ -145,7 +169,8 @@ export default function CreateBloodRequest() {
     e.preventDefault();
     if (!form.location.lat)
       return setError("Please pin the hospital location on the map.");
-    setLoading(true);
+
+    setSubmitting(true);
     try {
       await createRequest(form);
       alert("Blood request created successfully ✅");
@@ -153,9 +178,14 @@ export default function CreateBloodRequest() {
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create request");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  if (loading)
+    return (
+      <div style={styles.loading}>Checking access and loading data...</div>
+    );
 
   return (
     <div style={styles.page}>
@@ -165,18 +195,17 @@ export default function CreateBloodRequest() {
             <div style={styles.iconCircle}>🩸</div>
             <h2 style={styles.title}>Create Blood Request</h2>
             <p style={styles.subtitle}>
-              Provide accurate details to find donors quickly.
+              Fill in details to find donors nearby.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} style={styles.form}>
-            {/* Row 1 */}
             <div style={styles.mainGrid}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Patient Name</label>
                 <input
                   name="patientName"
-                  placeholder="Patient Full Name"
+                  placeholder="Full Name"
                   style={styles.input}
                   value={form.patientName}
                   onChange={handleChange}
@@ -204,31 +233,26 @@ export default function CreateBloodRequest() {
                   </select>
                 </div>
                 <div style={styles.inputGroup}>
-                  <label style={styles.label}>Units (Pint)</label>
+                  <label style={styles.label}>Units</label>
                   <input
                     name="units"
                     type="number"
                     min="1"
-                    placeholder="Qty"
                     style={styles.input}
                     value={form.units}
                     onChange={handleChange}
-                    onKeyDown={(e) =>
-                      ["e", "E", "-", "+"].includes(e.key) && e.preventDefault()
-                    }
                     required
                   />
                 </div>
               </div>
             </div>
 
-            {/* Row 2 */}
             <div style={styles.mainGrid}>
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Hospital Name</label>
+                <label style={styles.label}>Hospital</label>
                 <input
                   name="hospital"
-                  placeholder="Hospital / Medical Center"
+                  placeholder="Hospital Name"
                   style={styles.input}
                   value={form.hospital}
                   onChange={handleChange}
@@ -245,7 +269,7 @@ export default function CreateBloodRequest() {
                     onChange={handleChange}
                     required
                   >
-                    <option value="">Select Province</option>
+                    <option value="">Select</option>
                     {provinces.map((p) => (
                       <option key={p} value={p}>
                         {p}
@@ -262,7 +286,7 @@ export default function CreateBloodRequest() {
                     onChange={handleChange}
                     required
                   >
-                    <option value="">Select District</option>
+                    <option value="">Select</option>
                     {locations[form.province]?.map((d) => (
                       <option key={d} value={d}>
                         {d}
@@ -273,17 +297,16 @@ export default function CreateBloodRequest() {
               </div>
             </div>
 
-            {/* Map Picker */}
             {form.district && (
               <div style={styles.mapSection}>
                 <div style={styles.mapHeader}>
-                  <label style={styles.label}>Pin Location on Map</label>
+                  <label style={styles.label}>Set Location</label>
                   <button
                     type="button"
                     onClick={useMyLocation}
                     style={styles.locationBtn}
                   >
-                    📍 Use My GPS
+                    📍 GPS
                   </button>
                 </div>
                 <div style={styles.mapWrapper}>
@@ -294,33 +317,21 @@ export default function CreateBloodRequest() {
                         : districtCenters[form.district] || [27.7172, 85.324]
                     }
                     onSelect={(pos) =>
-                      setForm((prev) => ({
-                        ...prev,
+                      setForm((p) => ({
+                        ...p,
                         location: { lat: pos.lat, lon: pos.lng },
                       }))
                     }
                   />
                 </div>
-                <p
-                  style={{
-                    ...styles.statusText,
-                    color: form.location.lat ? "#16a34a" : "#dc2626",
-                  }}
-                >
-                  {form.location.lat
-                    ? "✅ Location Pinned Successfully"
-                    : "⚠️ Click map to set hospital location"}
-                </p>
               </div>
             )}
 
-            {/* Row 3 */}
             <div style={styles.mainGrid}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Contact Phone</label>
                 <input
                   name="contactPhone"
-                  placeholder="98XXXXXXXX"
                   maxLength="10"
                   style={styles.input}
                   value={form.contactPhone}
@@ -329,13 +340,10 @@ export default function CreateBloodRequest() {
                 />
               </div>
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Urgency Level</label>
+                <label style={styles.label}>Urgency</label>
                 <select
                   name="urgency"
-                  style={{
-                    ...styles.input,
-                    color: form.urgency === "critical" ? "#b11226" : "#444",
-                  }}
+                  style={styles.input}
                   value={form.urgency}
                   onChange={handleChange}
                 >
@@ -349,8 +357,12 @@ export default function CreateBloodRequest() {
 
             {error && <div style={styles.errorBanner}>{error}</div>}
 
-            <button type="submit" disabled={loading} style={styles.submitBtn}>
-              {loading ? "Submitting..." : "Submit Request"}
+            <button
+              type="submit"
+              disabled={submitting}
+              style={styles.submitBtn}
+            >
+              {submitting ? "Processing..." : "Submit Blood Request"}
             </button>
           </form>
         </div>
@@ -367,106 +379,90 @@ const styles = {
     display: "flex",
     justifyContent: "center",
   },
-  container: { width: "100%", maxWidth: "1100px", margin: "0 auto" },
+  container: { width: "100%", maxWidth: "1100px" },
   card: {
     backgroundColor: "#fff",
     padding: "40px",
     borderRadius: "30px",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.1)",
-    border: "1px solid #f1f5f9",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
   },
-  header: { textAlign: "center", marginBottom: "40px" },
+  header: { textAlign: "center", marginBottom: "30px" },
   iconCircle: {
-    width: "70px",
-    height: "70px",
-    backgroundColor: "#fff1f2",
+    width: "60px",
+    height: "60px",
+    backgroundColor: "#fee2e2",
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "35px",
+    fontSize: "30px",
     margin: "0 auto 15px",
   },
-  title: {
-    fontSize: "2.2rem",
-    color: "#b11226",
-    fontWeight: "900",
-    margin: "0",
-    letterSpacing: "-1px",
-  },
-  subtitle: { color: "#64748b", fontSize: "1.1rem", marginTop: "10px" },
-  form: { display: "flex", flexDirection: "column", gap: "25px" },
+  title: { fontSize: "2rem", color: "#b11226", fontWeight: "900", margin: 0 },
+  subtitle: { color: "#64748b", marginTop: "5px" },
+  form: { display: "flex", flexDirection: "column", gap: "20px" },
   mainGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
     gap: "20px",
   },
   innerGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" },
-  inputGroup: { display: "flex", flexDirection: "column", gap: "10px" },
+  inputGroup: { display: "flex", flexDirection: "column", gap: "8px" },
   label: {
-    fontSize: "0.85rem",
+    fontSize: "0.8rem",
     fontWeight: "800",
-    color: "#334155",
+    color: "#475569",
     textTransform: "uppercase",
   },
   input: {
-    padding: "15px",
-    borderRadius: "15px",
+    padding: "12px",
+    borderRadius: "12px",
     border: "1.5px solid #e2e8f0",
-    fontSize: "1rem",
     outline: "none",
-    backgroundColor: "#fff",
   },
   mapSection: {
-    marginTop: "10px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "15px",
     backgroundColor: "#f1f5f9",
-    padding: "20px",
+    padding: "15px",
     borderRadius: "20px",
   },
   mapHeader: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: "10px",
+    marginBottom: "10px",
   },
   locationBtn: {
-    padding: "8px 16px",
-    border: "2px solid #b11226",
+    padding: "5px 12px",
+    border: "1.5px solid #b11226",
     color: "#b11226",
+    borderRadius: "8px",
     background: "#fff",
-    borderRadius: "12px",
     cursor: "pointer",
-    fontWeight: "700",
+    fontWeight: "bold",
   },
-  mapWrapper: {
-    height: "350px",
-    borderRadius: "15px",
-    overflow: "hidden",
-    border: "2px solid #fff",
-  },
-  statusText: { fontSize: "0.9rem", fontWeight: "700", textAlign: "center" },
+  mapWrapper: { height: "300px", borderRadius: "12px", overflow: "hidden" },
   submitBtn: {
-    padding: "20px",
+    padding: "18px",
     backgroundColor: "#b11226",
     color: "#fff",
     border: "none",
-    borderRadius: "18px",
-    fontSize: "1.2rem",
-    fontWeight: "900",
+    borderRadius: "15px",
+    fontSize: "1.1rem",
+    fontWeight: "bold",
     cursor: "pointer",
-    marginTop: "20px",
-    transition: "0.2s ease",
+    marginTop: "10px",
   },
   errorBanner: {
-    color: "#991b1b",
+    color: "#b91c1c",
     backgroundColor: "#fef2f2",
-    padding: "16px",
-    borderRadius: "12px",
+    padding: "12px",
+    borderRadius: "10px",
     textAlign: "center",
-    fontWeight: "600",
+    fontWeight: "bold",
+  },
+  loading: {
+    padding: "100px",
+    textAlign: "center",
+    fontWeight: "bold",
+    fontSize: "1.2rem",
   },
 };

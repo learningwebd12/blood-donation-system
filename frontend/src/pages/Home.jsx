@@ -28,18 +28,6 @@ export default function Home() {
           </p>
 
           <div style={styles.actions}>
-            <motion.button
-              whileHover={{
-                scale: 1.05,
-                boxShadow: "0 10px 20px rgba(177, 18, 38, 0.2)",
-              }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/search")}
-              style={{ ...styles.btn, background: brandColor }}
-            >
-              Find Blood Now
-            </motion.button>
-
             {!token && (
               <motion.button
                 whileHover={{
@@ -123,7 +111,10 @@ export default function Home() {
             immediately.
           </p>
         </div>
-        <button onClick={() => navigate("/search")} style={styles.bannerBtn}>
+        <button
+          onClick={() => navigate("/create-blood-request")}
+          style={styles.bannerBtn}
+        >
           Create Request
         </button>
       </div>

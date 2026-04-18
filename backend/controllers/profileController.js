@@ -83,14 +83,26 @@ exports.getProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const DONATION_GAP_DAYS = 90;
     let nextEligibleDate = null;
     let canDonate = true;
+    let remainingDays = 0;
 
     if (user.lastDonationDate) {
-      const nextDate = new Date(user.lastDonationDate);
-      nextDate.setDate(nextDate.getDate() + 90);
+      const lastDonation = new Date(user.lastDonationDate);
+      const nextDate = new Date(lastDonation);
+      nextDate.setDate(nextDate.getDate() + DONATION_GAP_DAYS);
+
       nextEligibleDate = nextDate;
-      canDonate = new Date() >= nextDate;
+
+      const today = new Date();
+      // Difference in milliseconds
+      const diffMs = nextDate - today;
+      // Convert to days
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+      remainingDays = diffDays > 0 ? diffDays : 0;
+      canDonate = diffDays <= 0;
     }
 
     res.json({
@@ -98,6 +110,7 @@ exports.getProfile = async (req, res) => {
       user,
       eligibility: {
         canDonate,
+        remainingDays, // Frontend ko countdown ko lagi yo chaincha
         lastDonationDate: user.lastDonationDate,
         nextEligibleDate,
         totalDonations: user.totalDonations || 0,
