@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import API from "../api/api"; // Profile check garna ko lagi naya import
 import {
   getAllRequests,
   acceptRequest,
@@ -7,26 +8,22 @@ import {
 } from "../services/bloodRequestService";
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
-    return null;
-  }
-
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
-
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) ** 2;
-
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
 export default function DonorRequestsView() {
   const [requests, setRequests] = useState([]);
+  const [eligibility, setEligibility] = useState(null); // Add Eligibility State
   const [myLocation, setMyLocation] = useState({ lat: null, lon: null });
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("priority");
@@ -38,8 +35,20 @@ export default function DonorRequestsView() {
   const userDistrict = currentUser?.location?.district || "";
 
   useEffect(() => {
-    const fetchRequests = async () => {
+    const initData = async () => {
       try {
+        // 1. First Check Eligibility from Profile API
+        const profileRes = await API.get("/profile/me");
+        const eligibilityData = profileRes.data.eligibility;
+        setEligibility(eligibilityData);
+
+        // 2. Yadi user eligible chaina bhane requests fetch nagarne
+        if (!eligibilityData?.canDonate) {
+          setLoading(false);
+          return;
+        }
+
+        // 3. Yadi eligible chha bhane matra requests fetch garne
         const res = await getAllRequests(undefined, undefined, userProvince);
 
         const donorVisibleRequests = (res.data.requests || []).filter((r) => {
@@ -56,7 +65,7 @@ export default function DonorRequestsView() {
 
         setRequests(donorVisibleRequests);
       } catch (error) {
-        console.error("Fetch failed", error);
+        console.error("Initialization failed", error);
       } finally {
         setLoading(false);
       }
@@ -69,12 +78,12 @@ export default function DonorRequestsView() {
             lat: pos.coords.latitude,
             lon: pos.coords.longitude,
           });
-          fetchRequests();
+          initData();
         },
-        () => fetchRequests(),
+        () => initData(),
       );
     } else {
-      fetchRequests();
+      initData();
     }
   }, [userProvince, currentUser?._id]);
 
@@ -170,7 +179,6 @@ export default function DonorRequestsView() {
   const handleAccept = async (id) => {
     try {
       await acceptRequest(id);
-
       setRequests((prev) =>
         prev.map((r) =>
           r._id === id
@@ -178,7 +186,6 @@ export default function DonorRequestsView() {
             : r,
         ),
       );
-
       alert("Request Accepted ✅");
     } catch (err) {
       alert(err.response?.data?.message || "Failed to accept");
@@ -188,13 +195,11 @@ export default function DonorRequestsView() {
   const handleMarkDonated = async (id) => {
     try {
       await markAsDonated(id);
-
       setRequests((prev) =>
         prev.map((r) =>
           r._id === id ? { ...r, status: "waiting_confirmation" } : r,
         ),
       );
-
       alert("Marked as donated. Waiting for requester confirmation ✅");
     } catch (err) {
       alert(err.response?.data?.message || "Failed to mark as donated");
@@ -203,6 +208,48 @@ export default function DonorRequestsView() {
 
   if (loading) {
     return <h2 style={{ textAlign: "center", padding: "30px" }}>Loading...</h2>;
+  }
+
+  // --- ELIGIBILITY CHECK VIEW (Tapaiko existing UI ko agadi yo halne) ---
+  if (eligibility && !eligibility.canDonate) {
+    return (
+      <div style={styles.page}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          style={styles.lockCard}
+        >
+          <div style={{ fontSize: "4rem", marginBottom: "20px" }}>⏳</div>
+          <h2 style={{ color: brandColor, marginBottom: "10px" }}>
+            Rest Period Active
+          </h2>
+          <p
+            style={{
+              color: "#475569",
+              fontSize: "1.1rem",
+              maxWidth: "450px",
+              margin: "0 auto",
+              lineHeight: "1.6",
+            }}
+          >
+            Thank you for your recent donation! To ensure your health and safe
+            recovery, medical guidelines suggest waiting 90 days between
+            donations.
+          </p>
+
+          <div style={styles.countdownBox}>
+            <span style={styles.daysLeft}>{eligibility.remainingDays}</span>
+            <span style={styles.daysLabel}>Days Remaining</span>
+          </div>
+
+          <p
+            style={{ color: "#94a3b8", marginTop: "20px", fontSize: "0.9rem" }}
+          >
+            You will automatically see new requests once your rest period ends.
+          </p>
+        </motion.div>
+      </div>
+    );
   }
 
   return (
@@ -437,11 +484,40 @@ export default function DonorRequestsView() {
 }
 
 const styles = {
-  page: {
-    minHeight: "100vh",
-    padding: "40px 20px",
-    background: "#fdfdfd",
+  // Existing styles sabai mathi ko code mai chha...
+  // Just adding the new styles for eligibility lock card here:
+  lockCard: {
+    maxWidth: "500px",
+    margin: "80px auto",
+    background: "#fff",
+    padding: "40px",
+    borderRadius: "30px",
+    textAlign: "center",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.05)",
+    border: "1px solid #f1f5f9",
   },
+  countdownBox: {
+    marginTop: "30px",
+    background: "#fff1f2",
+    padding: "20px",
+    borderRadius: "20px",
+    display: "inline-block",
+    minWidth: "150px",
+  },
+  daysLeft: {
+    display: "block",
+    fontSize: "3.5rem",
+    fontWeight: "800",
+    color: "rgb(177, 18, 38)",
+  },
+  daysLabel: {
+    fontSize: "0.9rem",
+    fontWeight: "700",
+    color: "#e11d48",
+    textTransform: "uppercase",
+  },
+  // --- Sabai tapaiko original styles tala ko copy gardai chu (unchanged) ---
+  page: { minHeight: "100vh", padding: "40px 20px", background: "#fdfdfd" },
   header: {
     textAlign: "center",
     marginBottom: "40px",
@@ -449,11 +525,7 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
   },
-  title: {
-    fontSize: "2.2rem",
-    fontWeight: "800",
-    marginBottom: "15px",
-  },
+  title: { fontSize: "2.2rem", fontWeight: "800", marginBottom: "15px" },
   filterContainer: {
     display: "flex",
     gap: "8px",
@@ -541,10 +613,7 @@ const styles = {
     fontWeight: "700",
     color: "#94a3b8",
   },
-  groupValue: {
-    fontSize: "1.4rem",
-    fontWeight: "800",
-  },
+  groupValue: { fontSize: "1.4rem", fontWeight: "800" },
   statusBadge: {
     padding: "6px 12px",
     borderRadius: "20px",
@@ -557,16 +626,8 @@ const styles = {
     color: "#1e293b",
     margin: 0,
   },
-  locationSub: {
-    fontSize: "0.9rem",
-    color: "#64748b",
-    margin: "4px 0",
-  },
-  postedBy: {
-    fontSize: "0.85rem",
-    color: "#94a3b8",
-    margin: 0,
-  },
+  locationSub: { fontSize: "0.9rem", color: "#64748b", margin: "4px 0" },
+  postedBy: { fontSize: "0.85rem", color: "#94a3b8", margin: 0 },
   modeInfoNearest: {
     fontSize: "0.8rem",
     fontWeight: "700",
@@ -597,11 +658,7 @@ const styles = {
     color: "#94a3b8",
     fontWeight: "700",
   },
-  statValue: {
-    fontSize: "0.95rem",
-    fontWeight: "600",
-    color: "#334155",
-  },
+  statValue: { fontSize: "0.95rem", fontWeight: "600", color: "#334155" },
   distanceBadge: {
     background: "rgba(177, 18, 38, 0.05)",
     color: "rgb(177, 18, 38)",
@@ -612,9 +669,7 @@ const styles = {
     textAlign: "center",
     marginBottom: "10px",
   },
-  actions: {
-    marginTop: "10px",
-  },
+  actions: { marginTop: "10px" },
   btn: {
     border: "none",
     borderRadius: "12px",
@@ -630,11 +685,7 @@ const styles = {
     gap: "8px",
     transition: "0.2s",
   },
-  acceptedGrid: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "10px",
-  },
+  acceptedGrid: { display: "flex", flexWrap: "wrap", gap: "10px" },
   waitBox: {
     marginTop: "10px",
     background: "#fff7ed",

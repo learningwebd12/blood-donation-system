@@ -1,275 +1,241 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { motion } from "framer-motion";
 
 export default function Home() {
   const navigate = useNavigate();
+  // Check if user is logged in
   const token = localStorage.getItem("token");
   const brandColor = "rgb(177, 18, 38)";
 
+  // logic: if not logged in, go to login. If logged in, go to request page.
+  const handleRequestClick = () => {
+    if (!token) {
+      navigate("/login");
+    } else {
+      navigate("/create-blood-request");
+    }
+  };
+
   return (
     <div style={styles.page}>
-      {/* Hero Section */}
-      <section style={styles.hero}>
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          style={styles.heroContent}
-        >
-          <div style={styles.badge}>🇳🇵 Serving all 77 Districts</div>
-          <h1 style={styles.title}>
-            The Gift of Blood is the <br />
-            <span style={{ color: brandColor }}>Gift of Life.</span>
-          </h1>
-          <p style={styles.subtitle}>
-            Every drop counts. Join Nepal's most trusted network connecting
-            thousands of voluntary donors with patients in urgent need.
-          </p>
+      {/* SECTION 1: HERO CONTAINER */}
+      <section style={styles.container1}>
+        <div style={styles.wrapper}>
+          <div style={styles.heroSplit}>
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              style={styles.heroContent}
+            >
+              <div style={styles.badge}>🇳🇵 Nepal's Network</div>
+              <h1 style={styles.title}>
+                The Gift of Blood is the <br />
+                <span style={{ color: brandColor }}>Gift of Life.</span>
+              </h1>
+              <p style={styles.subtitle}>
+                Connecting donors with patients across all 77 districts. Your
+                one contribution can save up to three lives.
+              </p>
+              <div style={styles.actions}>
+                <button
+                  style={{ ...styles.mainBtn, backgroundColor: brandColor }}
+                  onClick={handleRequestClick}
+                >
+                  Request Blood
+                </button>
 
-          <div style={styles.actions}>
-            {!token && (
-              <motion.button
-                whileHover={{
-                  scale: 1.05,
-                  backgroundColor: "rgba(177, 18, 38, 0.05)",
-                }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/register")}
-                style={{
-                  ...styles.btnOutline,
-                  borderColor: brandColor,
-                  color: brandColor,
-                }}
-              >
-                Become a Donor
-              </motion.button>
-            )}
+                {/* Only show "Be a Donor" if the user is NOT logged in */}
+                {!token && (
+                  <button
+                    style={{
+                      ...styles.outlineBtn,
+                      borderColor: brandColor,
+                      color: brandColor,
+                    }}
+                    onClick={() => navigate("/register")}
+                  >
+                    Be a Donor
+                  </button>
+                )}
+              </div>
+            </motion.div>
+
+            <div style={styles.imageBox}>
+              <img
+                src="https://ichef.bbci.co.uk/ace/standard/976/cpsprodpb/182FF/production/_107317099_blooddonor976.jpg"
+                alt="Blood Donation"
+                style={styles.heroImg}
+              />
+              <div style={styles.floatTag}>❤️ 2.5k+ Lives Saved</div>
+            </div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
-      {/* Stats Section - Floating Overlap */}
-      <div style={styles.statsContainer}>
-        {[
-          { icon: "🩸", count: "8+", label: "Blood Groups" },
-          { icon: "🏢", count: "500+", label: "Hospitals" },
-          { icon: "🤝", count: "10k+", label: "Donors" },
-          { icon: "💖", count: "2500+", label: "Lives Saved" },
-        ].map((stat, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.1 }}
-            style={styles.statCard}
-          >
-            <div style={styles.statIcon}>{stat.icon}</div>
-            <h3 style={styles.statCount}>{stat.count}</h3>
-            <p style={styles.statLabel}>{stat.label}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* NEW: How it Works Section */}
-      <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>How it Works</h2>
-        <div style={styles.stepGrid}>
+      {/* SECTION 2: STATS CONTAINER */}
+      {/* <section style={styles.container2}>
+        <div style={styles.statsGrid}>
           {[
-            {
-              t: "Request",
-              d: "Post a request with hospital details and required blood group.",
-              i: "📝",
-            },
-            {
-              t: "Connect",
-              d: "Our system notifies eligible donors in your specific district.",
-              i: "🔔",
-            },
-            {
-              t: "Save",
-              d: "A donor accepts, contacts you, and completes the donation.",
-              i: "🎁",
-            },
-          ].map((step, i) => (
-            <div key={i} style={styles.stepCard}>
-              <div style={styles.stepIcon}>{step.i}</div>
-              <h4 style={styles.stepTitle}>{step.t}</h4>
-              <p style={styles.stepText}>{step.d}</p>
+            { n: "8+", l: "Blood Groups", i: "🩸" },
+            { n: "500+", l: "Hospitals", i: "🏥" },
+            { n: "10k+", l: "Total Donors", i: "🤝" },
+            { n: "77", l: "Districts", i: "📍" },
+          ].map((item, idx) => (
+            <div key={idx} style={styles.statCard}>
+              <div style={styles.statIcon}>{item.i}</div>
+              <h2 style={styles.statNumber}>{item.n}</h2>
+              <p style={styles.statLabel}>{item.l}</p>
             </div>
           ))}
         </div>
-      </section>
+      </section> */}
 
-      {/* NEW: Emergency Banner */}
-      <div style={{ ...styles.emergencyBanner, background: brandColor }}>
-        <div style={styles.bannerContent}>
-          <h3>Urgent Requirement?</h3>
-          <p>
-            Don't wait. Create a request and let our community help you
-            immediately.
-          </p>
+      {/* SECTION 3: PROCESS & CTA CONTAINER */}
+      <section style={styles.container3}>
+        <div style={styles.wrapper}>
+          <h2 style={styles.sectionHeading}>How It Works</h2>
+          <div style={styles.processGrid}>
+            <div style={styles.pCard}>
+              <div style={{ ...styles.pNum, color: brandColor }}>01</div>
+              <h3>Post Request</h3>
+              <p>Fill in the details of the patient and hospital.</p>
+            </div>
+            <div style={styles.pCard}>
+              <div style={{ ...styles.pNum, color: brandColor }}>02</div>
+              <h3>Get Matched</h3>
+              <p>Donors nearby receive instant notifications.</p>
+            </div>
+            <div style={styles.pCard}>
+              <div style={{ ...styles.pNum, color: brandColor }}>03</div>
+              <h3>Save a Life</h3>
+              <p>Directly contact the donor and get help.</p>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={() => navigate("/create-blood-request")}
-          style={styles.bannerBtn}
-        >
-          Create Request
-        </button>
-      </div>
+      </section>
     </div>
   );
 }
 
 const styles = {
-  page: {
-    minHeight: "100vh",
-    fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-    backgroundColor: "#ffffff",
-    overflowX: "hidden",
+  page: { background: "#fff", fontFamily: "'Inter', sans-serif" },
+  wrapper: { maxWidth: "1140px", margin: "0 auto", padding: "0 20px" },
+  container1: {
+    padding: "100px 0",
+    background: "linear-gradient(180deg, #fff5f5 0%, #ffffff 100%)",
   },
-  hero: {
-    padding: "120px 20px 100px 20px",
-    textAlign: "center",
-    background: "radial-gradient(circle at top right, #fff5f5 0%, #ffffff 50%)",
-    position: "relative",
+  heroSplit: {
+    display: "flex",
+    alignItems: "center",
+    gap: "50px",
+    flexWrap: "wrap",
   },
-  heroContent: {
-    maxWidth: "850px",
-    margin: "0 auto",
-  },
+  heroContent: { flex: 1, minWidth: "320px" },
   badge: {
-    display: "inline-block",
+    background: "#fff",
     padding: "8px 16px",
-    background: "rgba(177, 18, 38, 0.1)",
-    color: "rgb(177, 18, 38)",
-    borderRadius: "100px",
-    fontSize: "0.9rem",
+    borderRadius: "20px",
+    display: "inline-block",
     fontWeight: "700",
+    fontSize: "0.8rem",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
     marginBottom: "20px",
   },
   title: {
-    fontSize: "clamp(2.5rem, 6vw, 4rem)",
-    color: "#1a1a1a",
-    marginBottom: "24px",
-    fontWeight: "800",
-    lineHeight: "1.1",
-    letterSpacing: "-1px",
+    fontSize: "3.5rem",
+    fontWeight: "900",
+    lineHeight: 1.1,
+    marginBottom: "20px",
   },
   subtitle: {
-    fontSize: "1.25rem",
-    color: "#4b5563",
-    maxWidth: "600px",
-    margin: "0 auto 48px auto",
-    lineHeight: "1.6",
+    fontSize: "1.1rem",
+    color: "#666",
+    marginBottom: "35px",
+    lineHeight: 1.6,
   },
-  actions: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "16px",
-    flexWrap: "wrap",
-  },
-  btn: {
-    padding: "18px 40px",
-    color: "#fff",
+  actions: { display: "flex", gap: "15px" },
+  mainBtn: {
+    padding: "15px 30px",
     border: "none",
-    cursor: "pointer",
-    borderRadius: "16px",
-    fontSize: "1.1rem",
+    borderRadius: "12px",
+    color: "#fff",
     fontWeight: "700",
-    transition: "all 0.3s ease",
+    cursor: "pointer",
   },
-  btnOutline: {
-    padding: "18px 40px",
+  outlineBtn: {
+    padding: "15px 30px",
     border: "2px solid",
-    background: "transparent",
-    cursor: "pointer",
-    borderRadius: "16px",
-    fontSize: "1.1rem",
+    borderRadius: "12px",
+    background: "none",
     fontWeight: "700",
-    transition: "all 0.3s ease",
+    cursor: "pointer",
   },
-  statsContainer: {
+  imageBox: { flex: 1, position: "relative", minWidth: "320px" },
+  heroImg: {
+    width: "100%",
+    borderRadius: "30px",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+  },
+  floatTag: {
+    position: "absolute",
+    bottom: "20px",
+    left: "20px",
+    background: "#fff",
+    padding: "12px 20px",
+    borderRadius: "15px",
+    fontWeight: "700",
+    boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
+  },
+  container2: {
+    marginTop: "-60px",
+    padding: "0 20px",
+    zIndex: 10,
+    position: "relative",
+  },
+  statsGrid: {
+    maxWidth: "1140px",
+    margin: "0 auto",
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "24px",
-    maxWidth: "1100px",
-    margin: "-60px auto 0 auto",
-    padding: "0 20px",
-    position: "relative",
-    zIndex: 10,
+    gap: "20px",
   },
   statCard: {
     background: "#fff",
-    padding: "40px 20px",
-    borderRadius: "24px",
+    padding: "30px",
+    borderRadius: "20px",
     textAlign: "center",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.08)",
-    border: "1px solid #f1f5f9",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
   },
-  statIcon: { fontSize: "2.5rem", marginBottom: "12px" },
-  statCount: {
-    fontSize: "2rem",
-    margin: "8px 0",
-    color: "#1a1a1a",
-    fontWeight: "800",
-  },
+  statIcon: { fontSize: "2rem", marginBottom: "10px" },
+  statNumber: { fontSize: "2rem", fontWeight: "800", margin: "5px 0" },
   statLabel: {
-    color: "#64748b",
+    color: "#888",
     fontWeight: "600",
-    margin: 0,
-    textTransform: "uppercase",
     fontSize: "0.8rem",
-    letterSpacing: "1px",
+    textTransform: "uppercase",
   },
-
-  section: { padding: "100px 20px", maxWidth: "1100px", margin: "0 auto" },
-  sectionTitle: {
+  container3: { padding: "100px 0" },
+  sectionHeading: {
     textAlign: "center",
     fontSize: "2.5rem",
     fontWeight: "800",
-    marginBottom: "60px",
-    color: "#1a1a1a",
+    marginBottom: "50px",
   },
-  stepGrid: {
+  processGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "40px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "30px",
   },
-  stepCard: { textAlign: "center", padding: "20px" },
-  stepIcon: { fontSize: "3rem", marginBottom: "20px" },
-  stepTitle: {
-    fontSize: "1.5rem",
-    fontWeight: "700",
-    marginBottom: "12px",
-    color: "#1a1a1a",
-  },
-  stepText: { color: "#64748b", lineHeight: "1.6" },
-
-  emergencyBanner: {
-    margin: "40px 20px",
-    borderRadius: "24px",
+  pCard: {
+    background: "#f9f9f9",
     padding: "40px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: "24px",
-    maxWidth: "1100px",
-    marginLeft: "auto",
-    marginRight: "auto",
-    color: "white",
+    borderRadius: "25px",
+    textAlign: "center",
   },
-  bannerContent: { maxWidth: "600px" },
-  bannerBtn: {
-    padding: "14px 28px",
-    background: "white",
-    color: "rgb(177, 18, 38)",
-    border: "none",
-    borderRadius: "12px",
-    fontWeight: "700",
-    cursor: "pointer",
-    fontSize: "1rem",
+  pNum: {
+    fontSize: "3rem",
+    fontWeight: "900",
+    opacity: 0.2,
+    marginBottom: "10px",
   },
 };

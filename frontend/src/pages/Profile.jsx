@@ -34,9 +34,13 @@ export default function Profile() {
       </div>
     );
 
+  // Validation Logic for Donor
+  const isDonor = user.userType?.includes("donor");
+  const ageError = isDonor && user.healthInfo?.age < 18;
+  const weightError = isDonor && user.healthInfo?.weight < 50;
+
   return (
     <div style={styles.pageContainer}>
-      {/* Banner / Header Section - Spans Full Width */}
       <div style={styles.fullBanner}>
         <div style={styles.avatarCircle}>
           {user.bloodType ? (
@@ -51,24 +55,44 @@ export default function Profile() {
         <div style={styles.header}>
           <h2 style={styles.name}>{user.name}</h2>
           <div style={styles.badge}>
-            {user.userType?.includes("donor") ? "⭐ Active Donor" : "Receiver"}
+            {isDonor ? "⭐ Active Donor" : "Receiver"}
           </div>
           <p style={styles.locationText}>
             📍 {user.location?.district}, {user.location?.province}
           </p>
         </div>
 
-        {/* Info Grid - Adjusted for Full Width Scannability */}
+        {/* Info Grid - Updated with Age & Weight Conditions */}
         <div style={styles.statsGrid}>
           <div style={styles.infoBox}>
             <span style={styles.label}>AGE</span>
-            <span style={styles.value}>{user.healthInfo?.age || "--"}</span>
+            <span
+              style={{
+                ...styles.value,
+                color: ageError ? "#d32f2f" : "#0f172a",
+              }}
+            >
+              {user.healthInfo?.age || "--"}
+            </span>
+            {ageError && (
+              <span style={styles.errorSpan}>Age must be ≥ 18 to donate</span>
+            )}
           </div>
           <div style={styles.infoBox}>
             <span style={styles.label}>WEIGHT</span>
-            <span style={styles.value}>
+            <span
+              style={{
+                ...styles.value,
+                color: weightError ? "#d32f2f" : "#0f172a",
+              }}
+            >
               {user.healthInfo?.weight || "--"} <small>kg</small>
             </span>
+            {weightError && (
+              <span style={styles.errorSpan}>
+                Weight must be ≥ 50 to donate
+              </span>
+            )}
           </div>
           <div style={styles.infoBox}>
             <span style={styles.label}>GENDER</span>
@@ -77,7 +101,6 @@ export default function Profile() {
         </div>
 
         <div style={styles.sectionLayout}>
-          {/* Left Column: Contact Details */}
           <div style={styles.column}>
             <h3 style={styles.sectionTitle}>Contact Information</h3>
             <div style={styles.contactCard}>
@@ -92,8 +115,7 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Right Column: Donation Eligibility (Donors only) */}
-          {user.userType?.includes("donor") && eligibility && (
+          {isDonor && eligibility && (
             <div style={styles.column}>
               <h3 style={styles.sectionTitle}>Donation Status</h3>
               <div style={styles.donationContainer}>
@@ -119,23 +141,29 @@ export default function Profile() {
                 <div
                   style={{
                     ...styles.eligibilityBanner,
-                    background: eligibility.canDonate ? "#ecfdf5" : "#fff7ed",
-                    color: eligibility.canDonate ? "#166534" : "#c2410c",
-                    border: eligibility.canDonate
-                      ? "1px solid #86efac"
-                      : "1px solid #fdba74",
+                    background:
+                      eligibility.canDonate && !ageError && !weightError
+                        ? "#ecfdf5"
+                        : "#fff7ed",
+                    color:
+                      eligibility.canDonate && !ageError && !weightError
+                        ? "#166534"
+                        : "#c2410c",
+                    border:
+                      eligibility.canDonate && !ageError && !weightError
+                        ? "1px solid #86efac"
+                        : "1px solid #fdba74",
                   }}
                 >
-                  {eligibility.canDonate
+                  {eligibility.canDonate && !ageError && !weightError
                     ? "✅ You are eligible to donate now"
-                    : `⏳ Eligible in ${eligibility.remainingDays} days`}
+                    : "❌ Ineligible for donation (Check health info)"}
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer Actions */}
         <div style={styles.footer}>
           <button
             style={styles.editBtn}
@@ -159,11 +187,16 @@ export default function Profile() {
 }
 
 const styles = {
-  pageContainer: {
-    minHeight: "100vh",
-    background: "#f8fafc",
-    width: "100%",
+  // Tapaiko sabai purano styles haru mathi as it is chhan...
+  // Sirf extra error display ko lagi yo style thapiyeko ho:
+  errorSpan: {
+    display: "block",
+    fontSize: "0.7rem",
+    color: "#d32f2f",
+    marginTop: "5px",
+    fontWeight: "bold",
   },
+  pageContainer: { minHeight: "100vh", background: "#f8fafc", width: "100%" },
   fullBanner: {
     height: "160px",
     background: "linear-gradient(135deg, #d32f2f 0%, #7c0a18 100%)",
@@ -185,20 +218,14 @@ const styles = {
     border: "6px solid #f8fafc",
     boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
   },
-  bloodSymbol: {
-    fontSize: "2.5rem",
-    fontWeight: "800",
-    color: "#d32f2f",
-  },
+  bloodSymbol: { fontSize: "2.5rem", fontWeight: "800", color: "#d32f2f" },
   mainContent: {
-    maxWidth: "1000px", // Limits content width for readability, but page is full width
+    maxWidth: "1000px",
     margin: "80px auto 0 auto",
     padding: "0 20px 40px 20px",
     textAlign: "center",
   },
-  header: {
-    marginBottom: "40px",
-  },
+  header: { marginBottom: "40px" },
   name: {
     fontSize: "2.2rem",
     margin: "0 0 10px 0",
@@ -215,10 +242,7 @@ const styles = {
     fontWeight: "700",
     marginBottom: "10px",
   },
-  locationText: {
-    color: "#64748b",
-    fontSize: "1.1rem",
-  },
+  locationText: { color: "#64748b", fontSize: "1.1rem" },
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
@@ -239,11 +263,7 @@ const styles = {
     display: "block",
     marginBottom: "5px",
   },
-  value: {
-    fontSize: "1.4rem",
-    fontWeight: "800",
-    color: "#0f172a",
-  },
+  value: { fontSize: "1.4rem", fontWeight: "800" },
   sectionLayout: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
@@ -297,11 +317,7 @@ const styles = {
     color: "#64748b",
     display: "block",
   },
-  donationValue: {
-    fontSize: "1.3rem",
-    fontWeight: "800",
-    color: "#b91c1c",
-  },
+  donationValue: { fontSize: "1.3rem", fontWeight: "800", color: "#b91c1c" },
   eligibilityBanner: {
     padding: "15px",
     borderRadius: "15px",

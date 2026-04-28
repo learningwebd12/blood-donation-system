@@ -1,11 +1,18 @@
-*{
+/* 1. Imports MUST come first */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* 2. Global Resets */
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
- 
 }
 
-/* Add this to your main CSS file */
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* 3. Animations */
 @keyframes fadeInSlideUp {
   from {
     opacity: 0;

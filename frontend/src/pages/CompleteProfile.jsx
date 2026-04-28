@@ -29,7 +29,6 @@ export default function CompleteProfile() {
     });
   }, []);
 
-  // Blocks '-' and 'e' keys and shows error
   const blockInvalidChar = (e) => {
     if (e.key === "-" || e.key === "e" || e.key === "+") {
       e.preventDefault();
@@ -41,7 +40,6 @@ export default function CompleteProfile() {
     const { name, value, type } = e.target;
     setError("");
 
-    // Safety check for manual typing or pasting
     if (type === "number" && value.includes("-")) {
       setError("Negative values are not allowed.");
       return;
@@ -63,11 +61,25 @@ export default function CompleteProfile() {
     e.preventDefault();
     setError("");
 
+    // 1. Basic Type Selection Check
     if (form.userType.length === 0) {
       setError("Please select whether you are a Donor or a Receiver.");
       return;
     }
 
+    // 2. Eligibility Validation (Check on Submit Click)
+    if (form.userType.includes("donor")) {
+      if (!form.age || parseInt(form.age) < 18) {
+        setError("To be a donor, your age must be 18 or older.");
+        return;
+      }
+      if (!form.weight || parseInt(form.weight) < 50) {
+        setError("To be a donor, your weight must be at least 50 kg.");
+        return;
+      }
+    }
+
+    // 3. General Validation
     if (form.age && (form.age <= 0 || form.age > 120)) {
       setError("Please enter a valid age.");
       return;
@@ -215,6 +227,7 @@ export default function CompleteProfile() {
                 value={form.age}
                 onKeyDown={blockInvalidChar}
                 onChange={handleChange}
+                required
               />
             </div>
             <div style={styles.inputGroup}>
@@ -228,6 +241,7 @@ export default function CompleteProfile() {
                 value={form.weight}
                 onKeyDown={blockInvalidChar}
                 onChange={handleChange}
+                required
               />
             </div>
             <div style={styles.inputGroup}>
@@ -237,6 +251,7 @@ export default function CompleteProfile() {
                 style={styles.select}
                 value={form.gender}
                 onChange={handleChange}
+                required
               >
                 <option value="">--</option>
                 <option>Male</option>

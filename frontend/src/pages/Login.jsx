@@ -6,36 +6,39 @@ export default function Login() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(""); // State to store error messages
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError(""); // Clear previous errors
+    setError("");
 
-    // --- VALIDATION LOGIC ---
-    const phoneRegex = /^9\d{9}$/;
-
-    if (!phoneRegex.test(phone)) {
-      setError("Please enter a valid 10-digit phone number starting with 9.");
+    // 1. Check if fields are empty
+    if (!phone.trim() || !password.trim()) {
+      setError("Phone number and password cannot be empty.");
       return;
     }
 
+    // 2. Validate phone: Only digits, exactly 10 digits, starts with 9
+    const phoneRegex = /^9\d{9}$/;
+    if (!phoneRegex.test(phone)) {
+      setError(
+        "Please enter a valid 10-digit phone number (Numbers only, starting with 9).",
+      );
+      return;
+    }
+
+    // 3. Password length check
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
     }
-    // -------------------------
 
     setLoading(true);
-
     try {
       const res = await API.post("/auth/login", { phone, password });
-
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      alert("Welcome back!");
       navigate("/");
     } catch (err) {
       setError(
@@ -52,9 +55,7 @@ export default function Login() {
         <div style={styles.header}>
           <div style={styles.iconCircle}>❤️</div>
           <h2 style={styles.title}>Welcome Back</h2>
-          <p style={styles.subtitle}>
-            Log in to manage your donations or find help.
-          </p>
+          <p style={styles.subtitle}>Log in to manage your donations</p>
         </div>
 
         <form onSubmit={handleLogin} style={styles.form}>
@@ -62,11 +63,17 @@ export default function Login() {
             <label style={styles.label}>Phone Number</label>
             <input
               type="text"
+              inputMode="numeric"
               placeholder="98********"
               style={styles.input}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              required
+              // Prevent non-numeric typing
+              onKeyPress={(e) => {
+                if (!/[0-9]/.test(e.key)) e.preventDefault();
+              }}
+              onFocus={(e) => (e.target.style.borderColor = "#d32f2f")}
+              onBlur={(e) => (e.target.style.borderColor = "#e0e0e0")}
             />
           </div>
 
@@ -81,16 +88,20 @@ export default function Login() {
               style={styles.input}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+              onFocus={(e) => (e.target.style.borderColor = "#d32f2f")}
+              onBlur={(e) => (e.target.style.borderColor = "#e0e0e0")}
             />
           </div>
 
-          {/* --- ERROR MESSAGE SPAN --- */}
-          {error && <span style={styles.errorText}>{error}</span>}
+          {error && <div style={styles.errorText}>{error}</div>}
 
           <button
             type="submit"
-            style={loading ? { ...styles.btn, opacity: 0.7 } : styles.btn}
+            style={
+              loading
+                ? { ...styles.btn, opacity: 0.7, transform: "scale(0.98)" }
+                : styles.btn
+            }
             disabled={loading}
           >
             {loading ? "Verifying..." : "Login"}
@@ -109,55 +120,56 @@ export default function Login() {
 }
 
 const styles = {
-  // ... your existing styles ...
   wrapper: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    minHeight: "calc(100vh - 80px)",
-    backgroundColor: "#fcfcfc",
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #fff5f5 0%, #ffffff 100%)",
     padding: "20px",
+    fontFamily: "'Poppins', sans-serif",
   },
   card: {
-    background: "#fff",
-    padding: "40px",
-    borderRadius: "16px",
-    boxShadow: "0 15px 35px rgba(0,0,0,0.08)",
-    maxWidth: "400px",
+    background: "#ffffff",
+    padding: "40px 30px",
+    borderRadius: "24px",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.06)",
+    maxWidth: "420px",
     width: "100%",
-    border: "1px solid #eee",
+    border: "1px solid rgba(0,0,0,0.03)",
   },
   header: {
     textAlign: "center",
-    marginBottom: "30px",
+    marginBottom: "32px",
   },
   iconCircle: {
-    width: "60px",
-    height: "60px",
-    backgroundColor: "#fff5f5",
-    borderRadius: "50%",
+    width: "64px",
+    height: "64px",
+    backgroundColor: "#fff0f0",
+    borderRadius: "20px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    margin: "0 auto 15px",
-    fontSize: "1.5rem",
-    color: "#d32f2f",
+    margin: "0 auto 16px",
+    fontSize: "1.8rem",
+    transform: "rotate(-10deg)",
   },
   title: {
     margin: "0 0 8px 0",
-    color: "#2d3436",
-    fontSize: "1.8rem",
+    color: "#1a1a1a",
+    fontSize: "1.75rem",
     fontWeight: "700",
+    letterSpacing: "-0.5px",
   },
   subtitle: {
-    color: "#636e72",
-    fontSize: "0.95rem",
+    color: "#718096",
+    fontSize: "0.9rem",
     margin: 0,
   },
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "24px",
   },
   inputGroup: {
     display: "flex",
@@ -172,57 +184,60 @@ const styles = {
   label: {
     fontSize: "0.85rem",
     fontWeight: "600",
-    color: "#444",
+    color: "#4a5568",
+    marginLeft: "4px",
   },
   forgotPass: {
     fontSize: "0.8rem",
     color: "#d32f2f",
     cursor: "pointer",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   input: {
-    padding: "14px",
-    borderRadius: "10px",
-    border: "1px solid #e0e0e0",
-    fontSize: "1rem",
-    transition: "border-color 0.2s",
+    padding: "16px",
+    borderRadius: "12px",
+    border: "2px solid #edf2f7",
+    fontSize: "0.95rem",
+    fontFamily: "'Poppins', sans-serif",
+    transition: "all 0.2s ease",
     outline: "none",
-    background: "#fdfdfd",
+    background: "#f8fafc",
   },
   btn: {
-    padding: "14px",
+    padding: "16px",
     backgroundColor: "#d32f2f",
     color: "#fff",
     border: "none",
-    borderRadius: "10px",
-    fontSize: "1.1rem",
+    borderRadius: "12px",
+    fontSize: "1rem",
     fontWeight: "600",
     cursor: "pointer",
-    marginTop: "10px",
-    transition: "transform 0.1s ease, background 0.2s ease",
-    boxShadow: "0 4px 12px rgba(211, 47, 47, 0.25)",
+    marginTop: "8px",
+    transition: "all 0.3s ease",
+    boxShadow: "0 10px 15px -3px rgba(211, 47, 47, 0.3)",
+    fontFamily: "'Poppins', sans-serif",
   },
   footerText: {
     textAlign: "center",
-    marginTop: "25px",
+    marginTop: "30px",
     fontSize: "0.9rem",
-    color: "#636e72",
+    color: "#718096",
   },
   link: {
     color: "#d32f2f",
-    fontWeight: "bold",
+    fontWeight: "700",
     cursor: "pointer",
     textDecoration: "none",
+    marginLeft: "5px",
   },
-  // --- ADDED THIS STYLE ---
   errorText: {
-    color: "#d32f2f",
-    fontSize: "0.85rem",
+    color: "#e53e3e",
+    fontSize: "0.8rem",
     textAlign: "center",
     fontWeight: "500",
     backgroundColor: "#fff5f5",
-    padding: "8px",
-    borderRadius: "6px",
-    border: "1px solid #ffdada",
+    padding: "12px",
+    borderRadius: "10px",
+    border: "1px solid #feb2b2",
   },
 };

@@ -13,15 +13,16 @@ export default function Register() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Handle changes and block numbers in the Name field
   const handleChange = (e) => {
     setError("");
     const { name, value } = e.target;
 
     if (name === "name") {
-      // Remove any numeric characters immediately while typing
       const alphaValue = value.replace(/[0-9]/g, "");
       setForm({ ...form, name: alphaValue });
+    } else if (name === "phone") {
+      const numericValue = value.replace(/\D/g, "");
+      setForm({ ...form, phone: numericValue });
     } else {
       setForm({ ...form, [name]: value });
     }
@@ -31,28 +32,46 @@ export default function Register() {
     e.preventDefault();
     setError("");
 
-    // --- VALIDATION LOGIC ---
+    // --- FIELD-SPECIFIC VALIDATION LOGIC ---
 
-    // 1. Name validation (Alpha only + length)
+    // 1. Individual Empty Checks
+    if (!form.name.trim()) {
+      setError("Name field is required.");
+      return;
+    }
+    if (!form.email.trim()) {
+      setError("Email field is required.");
+      return;
+    }
+    if (!form.phone.trim()) {
+      setError("Phone number is required.");
+      return;
+    }
+    if (!form.password.trim()) {
+      setError("Password field is required.");
+      return;
+    }
+
+    // 2. Format Validations
     const nameRegex = /^[a-zA-Z\s]+$/;
     if (!nameRegex.test(form.name) || form.name.trim().length < 3) {
       setError("Please enter a valid Full Name (Letters only, min 3 chars).");
       return;
     }
 
-    // 2. Phone validation (Nepali format: starts with 9, 10 digits)
     const phoneRegex = /^9\d{9}$/;
     if (!phoneRegex.test(form.phone)) {
-      setError("Please enter a valid 10-digit phone number starting with 9.");
+      setError(
+        "Please enter a valid 10-digit phone number (Numbers only, starting with 9).",
+      );
       return;
     }
 
-    // 3. Password validation
     if (form.password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
     }
-    // -------------------------
+    // ---------------------------------------
 
     setLoading(true);
     try {
@@ -90,7 +109,6 @@ export default function Register() {
               style={styles.input}
               value={form.name}
               onChange={handleChange}
-              required
             />
           </div>
 
@@ -103,7 +121,6 @@ export default function Register() {
               style={styles.input}
               value={form.email}
               onChange={handleChange}
-              required
             />
           </div>
 
@@ -111,11 +128,14 @@ export default function Register() {
             <label style={styles.label}>Phone Number</label>
             <input
               name="phone"
+              inputMode="numeric"
               placeholder="98********"
               style={styles.input}
               value={form.phone}
               onChange={handleChange}
-              required
+              onKeyPress={(e) => {
+                if (!/[0-9]/.test(e.key)) e.preventDefault();
+              }}
             />
           </div>
 
@@ -128,11 +148,9 @@ export default function Register() {
               style={styles.input}
               value={form.password}
               onChange={handleChange}
-              required
             />
           </div>
 
-          {/* --- ERROR MESSAGE DISPLAY --- */}
           {error && <span style={styles.errorText}>{error}</span>}
 
           <button
@@ -163,6 +181,7 @@ const styles = {
     minHeight: "calc(100vh - 80px)",
     backgroundColor: "#f8f9fa",
     padding: "20px",
+    fontFamily: "'Poppins', sans-serif",
   },
   card: {
     background: "#fff",
@@ -172,41 +191,24 @@ const styles = {
     maxWidth: "400px",
     width: "100%",
   },
-  header: {
-    textAlign: "center",
-    marginBottom: "30px",
-  },
+  header: { textAlign: "center", marginBottom: "30px" },
   title: {
     margin: "10px 0",
     color: "#2d3436",
     fontSize: "1.8rem",
+    fontWeight: "700",
   },
-  subtitle: {
-    color: "#636e72",
-    fontSize: "0.9rem",
-    lineHeight: "1.4",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "18px",
-  },
-  inputGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "5px",
-  },
-  label: {
-    fontSize: "0.85rem",
-    fontWeight: "600",
-    color: "#444",
-  },
+  subtitle: { color: "#636e72", fontSize: "0.9rem", lineHeight: "1.4" },
+  form: { display: "flex", flexDirection: "column", gap: "18px" },
+  inputGroup: { display: "flex", flexDirection: "column", gap: "5px" },
+  label: { fontSize: "0.85rem", fontWeight: "600", color: "#444" },
   input: {
     padding: "12px 15px",
     borderRadius: "8px",
     border: "1px solid #ddd",
     fontSize: "1rem",
     outlineColor: "#d32f2f",
+    fontFamily: "inherit",
   },
   btn: {
     padding: "14px",
@@ -241,5 +243,6 @@ const styles = {
     padding: "8px",
     borderRadius: "6px",
     border: "1px solid #ffdada",
+    display: "block",
   },
 };
