@@ -27,9 +27,11 @@ export default function ReceiverRequestsView() {
   const handleConfirmReceived = async (id) => {
     try {
       await confirmBloodReceived(id);
+
       setRequests((prev) =>
         prev.map((r) => (r._id === id ? { ...r, status: "completed" } : r)),
       );
+
       alert("Blood received confirmed successfully ✅");
     } catch (error) {
       alert(error.response?.data?.message || "Failed to confirm");
@@ -65,76 +67,100 @@ export default function ReceiverRequestsView() {
         </div>
       ) : (
         <div style={styles.grid}>
-          {requests.map((req) => (
-            <div key={req._id} style={styles.card}>
-              <div style={styles.topRow}>
-                <div style={styles.bloodCircle}>{req.bloodType}</div>
-                <span
-                  style={{
-                    ...styles.badge,
-                    background: getStatusTheme(req.status).bg,
-                    color: getStatusTheme(req.status).text,
-                  }}
-                >
-                  {req.status.replace("_", " ")}
-                </span>
-              </div>
+          {requests.map((req) => {
+            const hoursLeft = req.expiresAt
+              ? Math.max(
+                  0,
+                  Math.ceil(
+                    (new Date(req.expiresAt) - new Date()) / (1000 * 60 * 60),
+                  ),
+                )
+              : null;
 
-              <div style={styles.infoSection}>
-                <InfoRow emoji="👤" label="Patient" value={req.patientName} />
-                <InfoRow emoji="🏥" label="Hospital" value={req.hospital} />
-                <InfoRow
-                  emoji="📍"
-                  label="Location"
-                  value={`${req.district}, ${req.province}`}
-                />
-                <InfoRow
-                  emoji="💉"
-                  label="Units Required"
-                  value={`${req.units} Units`}
-                />
-                <InfoRow emoji="📞" label="Contact" value={req.contactPhone} />
-              </div>
+            return (
+              <div key={req._id} style={styles.card}>
+                <div style={styles.topRow}>
+                  <div style={styles.bloodCircle}>{req.bloodType}</div>
 
-              {req.acceptedBy && (
-                <div style={styles.donorCard}>
-                  <p style={styles.donorTitle}>Matched Donor Info</p>
-                  <p style={styles.donorDetail}>
-                    <strong>Name:</strong> {req.acceptedBy.name || "Anonymous"}
-                  </p>
-                  <p style={styles.donorDetail}>
-                    <strong>Phone:</strong> {req.acceptedBy.phone || "N/A"}
-                  </p>
+                  <span
+                    style={{
+                      ...styles.badge,
+                      background: getStatusTheme(req.status).bg,
+                      color: getStatusTheme(req.status).text,
+                    }}
+                  >
+                    {req.status.replace("_", " ")}
+                  </span>
                 </div>
-              )}
 
-              {req.status === "waiting_confirmation" && (
-                <button
-                  onClick={() => handleConfirmReceived(req._id)}
-                  style={styles.confirmBtn}
-                  onMouseOver={(e) =>
-                    (e.target.style.filter = "brightness(1.1)")
-                  }
-                  onMouseOut={(e) => (e.target.style.filter = "brightness(1)")}
-                >
-                  Confirm Blood Received
-                </button>
-              )}
-            </div>
-          ))}
+                <div style={styles.infoSection}>
+                  <InfoRow emoji="👤" label="Patient" value={req.patientName} />
+                  <InfoRow emoji="🏥" label="Hospital" value={req.hospital} />
+                  <InfoRow
+                    emoji="📍"
+                    label="Location"
+                    value={`${req.district}, ${req.province}`}
+                  />
+                  <InfoRow
+                    emoji="💉"
+                    label="Units Required"
+                    value={`${req.units} Units`}
+                  />
+                  <InfoRow
+                    emoji="📞"
+                    label="Contact"
+                    value={req.contactPhone}
+                  />
+                </div>
+
+                {hoursLeft !== null && req.status === "pending" && (
+                  <p
+                    style={{
+                      color: hoursLeft <= 3 ? "#dc2626" : "#ea580c",
+                      fontWeight: "bold",
+                      marginTop: "12px",
+                    }}
+                  >
+                    ⏳ Expires in {hoursLeft} hrs
+                  </p>
+                )}
+
+                {req.acceptedBy && (
+                  <div style={styles.donorCard}>
+                    <p style={styles.donorTitle}>Matched Donor Info</p>
+                    <p style={styles.donorDetail}>
+                      <strong>Name:</strong>{" "}
+                      {req.acceptedBy.name || "Anonymous"}
+                    </p>
+                    <p style={styles.donorDetail}>
+                      <strong>Phone:</strong> {req.acceptedBy.phone || "N/A"}
+                    </p>
+                  </div>
+                )}
+
+                {req.status === "waiting_confirmation" && (
+                  <button
+                    onClick={() => handleConfirmReceived(req._id)}
+                    style={styles.confirmBtn}
+                  >
+                    Confirm Blood Received
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-// Helper components for cleaner JSX
 const InfoRow = ({ emoji, label, value }) => (
   <div style={styles.infoRow}>
-    <span style={styles.emoji}>{emoji}</span>
+    <span>{emoji}</span>
     <div>
-      <span style={styles.label}>{label}</span>
-      <span style={styles.value}>{value}</span>
+      <div style={styles.label}>{label}</div>
+      <div style={styles.value}>{value}</div>
     </div>
   </div>
 );
@@ -147,174 +173,95 @@ const getStatusTheme = (status) => {
       return { bg: "#ffedd5", text: "#c2410c" };
     case "accepted":
       return { bg: "#dbeafe", text: "#1d4ed8" };
+    case "expired":
+      return { bg: "#fee2e2", text: "#b91c1c" };
     default:
       return { bg: "#f1f5f9", text: "#475569" };
   }
 };
 
 const styles = {
-  page: {
-    padding: "40px 20px",
-    minHeight: "100vh",
-    background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    fontFamily: "'Inter', system-ui, sans-serif",
-  },
+  page: { padding: "30px" },
   header: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "40px",
+    marginBottom: "20px",
   },
-  title: {
-    color: "#1e293b",
-    margin: 0,
-    fontSize: "2.25rem",
-    fontWeight: "800",
-    letterSpacing: "-0.025em",
-  },
-  subtitle: {
-    color: "#64748b",
-    margin: "5px 0 0 0",
-    fontSize: "1rem",
-  },
+  title: { fontSize: "28px", fontWeight: "bold" },
+  subtitle: { color: "#64748b" },
   countBadge: {
-    background: "#fff",
-    padding: "8px 16px",
-    borderRadius: "12px",
-    fontWeight: "600",
-    color: "#b11226",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+    background: "#ef4444",
+    color: "white",
+    padding: "10px 18px",
+    borderRadius: "999px",
+    fontWeight: "bold",
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-    gap: "24px",
+    gap: "20px",
   },
   card: {
-    background: "#fff",
-    borderRadius: "24px",
-    padding: "24px",
-    boxShadow:
-      "0 10px 15px -3px rgba(0,0,0,0.04), 0 4px 6px -2px rgba(0,0,0,0.02)",
-    border: "1px solid #ffffff",
-    display: "flex",
-    flexDirection: "column",
-    transition: "transform 0.2s ease",
-  },
-  bloodCircle: {
-    width: "50px",
-    height: "50px",
-    borderRadius: "15px",
-    background: "#fee2e2",
-    color: "#b11226",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "800",
-    fontSize: "1.2rem",
+    background: "white",
+    padding: "20px",
+    borderRadius: "16px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
   },
   topRow: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "20px",
-  },
-  badge: {
-    padding: "6px 14px",
-    borderRadius: "99px",
-    fontSize: "12px",
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-  },
-  infoSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-    marginBottom: "20px",
-  },
-  infoRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  emoji: {
-    fontSize: "1.2rem",
-    background: "#f1f5f9",
-    padding: "8px",
-    borderRadius: "10px",
-  },
-  label: {
-    display: "block",
-    fontSize: "11px",
-    textTransform: "uppercase",
-    color: "#94a3b8",
-    fontWeight: "600",
-    letterSpacing: "0.025em",
-  },
-  value: {
-    display: "block",
-    fontSize: "15px",
-    color: "#334155",
-    fontWeight: "500",
-  },
-  donorCard: {
-    background: "#f8fafc",
-    padding: "16px",
-    borderRadius: "16px",
-    border: "1px dashed #e2e8f0",
-    marginTop: "10px",
-  },
-  donorTitle: {
-    margin: "0 0 8px 0",
-    fontSize: "12px",
-    color: "#1d4ed8",
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  donorDetail: {
-    margin: "4px 0",
-    fontSize: "14px",
-    color: "#475569",
-  },
-  confirmBtn: {
-    width: "100%",
-    marginTop: "20px",
-    padding: "14px",
-    border: "none",
-    borderRadius: "14px",
-    background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: "15px",
-    cursor: "pointer",
-    boxShadow: "0 4px 10px rgba(22, 163, 74, 0.2)",
-    transition: "all 0.2s ease",
-  },
-  loadingContainer: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100vh",
-    color: "#64748b",
-  },
-  spinner: {
-    width: "40px",
-    height: "40px",
-    border: "4px solid #f3f3f3",
-    borderTop: "4px solid #b11226",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
     marginBottom: "15px",
   },
-  emptyBox: {
-    background: "#fff",
-    padding: "60px 20px",
-    borderRadius: "32px",
-    textAlign: "center",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+  bloodCircle: {
+    width: "60px",
+    height: "60px",
+    borderRadius: "50%",
+    background: "#ef4444",
+    color: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+  },
+  badge: {
+    padding: "8px 14px",
+    borderRadius: "999px",
+    fontWeight: "600",
+  },
+  infoSection: { marginTop: "10px" },
+  infoRow: {
+    display: "flex",
+    gap: "12px",
+    marginBottom: "10px",
+  },
+  label: {
+    fontSize: "12px",
+    color: "#64748b",
+  },
+  value: {
+    fontWeight: "600",
+  },
+  donorCard: {
+    marginTop: "15px",
+    padding: "15px",
+    background: "#f8fafc",
+    borderRadius: "12px",
+  },
+  donorTitle: {
+    fontWeight: "bold",
+    marginBottom: "10px",
+  },
+  donorDetail: {
+    marginBottom: "5px",
+  },
+  confirmBtn: {
+    marginTop: "15px",
+    width: "100%",
+    padding: "12px",
+    border: "none",
+    background: "#16a34a",
+    color: "white",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: "bold",
   },
 };

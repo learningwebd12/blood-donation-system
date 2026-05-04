@@ -45,9 +45,19 @@ const BloodRequestSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
     status: {
       type: String,
-      enum: ["pending", "accepted", "waiting_confirmation", "completed"],
+      enum: [
+        "pending",
+        "accepted",
+        "waiting_confirmation",
+        "completed",
+        "expired",
+      ],
       default: "pending",
     },
     acceptedBy: {

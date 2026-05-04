@@ -16,7 +16,7 @@ exports.createRequest = async (req, res) => {
           "Access Denied: Donors are not allowed to create blood requests.",
       });
     }
-    
+
     const {
       patientName,
       bloodType,
@@ -57,6 +57,7 @@ exports.createRequest = async (req, res) => {
       contactPhone,
       urgency,
       location,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     res.status(201).json({
@@ -78,6 +79,15 @@ exports.getAllRequests = async (req, res) => {
   try {
     const { province } = req.query;
     const userId = req.user.id;
+    await BloodRequest.updateMany(
+      {
+        status: "pending",
+        expiresAt: { $lt: new Date() },
+      },
+      {
+        $set: { status: "expired" },
+      },
+    );
 
     const baseQuery = {
       $or: [
@@ -155,7 +165,16 @@ exports.acceptRequest = async (req, res) => {
       });
     }
 
-    // 4. Check status
+    // 4. expire
+    if (request.status === "expired") {
+      return res.status(400).json({
+        success: false,
+        message: "This request has expired",
+      });
+    }
+
+    //check pending
+
     if (request.status !== "pending") {
       return res.status(400).json({
         success: false,
